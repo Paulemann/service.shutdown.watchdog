@@ -10,8 +10,8 @@ import check_idle
 
 
 __addon__ = xbmcaddon.Addon()
-__addon_id__ = __addon__.getAddonInfo('id')
 __setting__ = __addon__.getSetting
+__addon_id__ = __addon__.getAddonInfo('id')
 
 
 class MyMonitor( xbmc.Monitor ):
