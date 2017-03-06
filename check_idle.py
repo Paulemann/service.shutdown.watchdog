@@ -52,7 +52,7 @@ codecs.register_error('mixed', mixed_decoder)
 
 
 def usage():
-    print('Usage: {} [OPTION]'.format(basename(sys.argv[0])))
+    print('Usage: {} [OPTION]'.format(os.path.basename(sys.argv[0])))
     print('Check system for configured background activities. Optionally, send action to kodi depending on current state (idle/busy).')
     print('\nExit status: \t0 (No background activities detected) or \n\t\t1 (Backgroung activities detected)')
     print('\nMonitored background activities are defined in \'settings.xml\' if addon is intalled.')
@@ -64,7 +64,7 @@ def usage():
     print('  ACTION                  \tSends ACTION to kodi when no background activies are detected.')
     print('\n  ACTION must be one of KODI\'s built-in functions.')
     print('  See: http://kodi.wiki/view/List_of_built-in_functions')
-    print('\nExample: {} --idle-action="suspend"'.format(basename(sys.argv[0])))
+    print('\nExample: {} --idle-action="suspend"'.format(os.path.basename(sys.argv[0])))
     sys.exit(-1)
 
 
@@ -98,15 +98,7 @@ def get_opts():
     if busy_action and ((busy_action[0] == '\'' and busy_action[-1] == '\'') or (busy_action[0] == '\"' and busy_action[-1] == '\"')):
         busy_action = busy_action[1:-1]
 
-
-def basename(path):
-    #return path.strip('/').split('/')[-1]
-    return os.path.basename(path)
-
-
-def dirname(path):
-    #return  '/'.join(path.split('/')[:-1])
-    return os.path.dirname(path)
+    return
 
 
 def log(msg):
@@ -249,7 +241,7 @@ def load_settings():
         data = json_request(GET_ADDON_PATH, 'localhost')
         if data['result']:
             path = data['result']['addon']['path']
-            p1 = os.path.dirname(dirname(path))
+            p1 = os.path.dirname(os.path.dirname(path))
             p2 = os.path.basename(path)
             settings_xml = p1 + '/userdata/addon_data/' + p2 + '/settings.xml'
 
@@ -484,7 +476,6 @@ def check_idle(arg_busy_action, arg_idle_action):
             log('Action \'{}\' cancelled.'.format(arg_idle_action))
             xbmc_send(busy_notification)
 
-        #sys.exit(1)
         return 1
 
     else:
@@ -494,7 +485,6 @@ def check_idle(arg_busy_action, arg_idle_action):
             log('Sending action \'{}\' ...'.format(arg_idle_action))
             xbmc_send(arg_idle_action)
 
-        #sys.exit(0)
         return 0
 
 
