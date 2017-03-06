@@ -104,7 +104,6 @@ def get_opts():
 def log(msg):
     if len(sys.argv) == 1:
         try:
-            #xbmc.log(msg='[{}] {}'.format(addon.getAddonInfo('id'), msg), level=xbmc.LOGNOTICE)
             xbmc.log(msg='[{}] {}'.format(prefix, msg), level=xbmc.LOGNOTICE)
         except:
             print('[{}] {}'.format(prefix, msg))
