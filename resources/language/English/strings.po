@@ -1,0 +1,62 @@
+# XBMC Media Center language file
+# Addon Name: Shutdown Watchdog Service
+# Addon id: service.shutdown.watchdog
+# Addon version: 0.2
+# Addon Provider: Paulemann
+msgid ""
+msgstr ""
+"Project-Id-Version: XBMC-Addons\n"
+"Report-Msgid-Bugs-To: alanwww1@xbmc.org\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+
+msgctxt "Addon Summary"
+msgid "Inhibit idle shutdown when background processes are active."
+msgstr ""
+
+msgctxt "Addon Description"
+msgid "The service will periodically reset the idle shutdown timer when it detetcs one of the monitored processes or connections active, or - in case the PVR backend is hosted locally - when a recording is due or remote PVR clients are connected."
+msgstr ""
+
+msgctxt "Addon Disclaimer"
+msgid "Use at your own risk"
+msgstr ""
+
+msgctxt "#30000"
+msgid "General"
+msgstr ""
+
+msgctxt "#30001"
+msgid "Monitored tcp ports (remote connections)"
+msgstr ""
+
+msgctxt "#30002"
+msgid "Monitored tcp ports (local connections)"
+msgstr ""
+
+msgctxt "#30003"
+msgid "Monitored procs (local)"
+msgstr ""
+
+msgctxt "#30004"
+msgid "PVR backend on localhost"
+msgstr ""
+
+msgctxt "#30005"
+msgid "PVR client port (see config of PVR backend)"
+msgstr ""
+
+msgctxt "#30006"
+msgid "Wake time before recording (minutes)"
+msgstr ""
+
+msgctxt "#30007"
+msgid "Time between checks (seconds)"
+msgstr ""

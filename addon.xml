@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="service.shutdown.watchdog" name="Shutdown Watchdog Service" version="0.3" provider-name="Paulemann">
+    <requires>
+        <import addon="xbmc.python" version="2.24.0"/>
+        <import addon="xbmc.json" version="6.32.4"/>
+    </requires>
+    <extension point="xbmc.service" library="service.py" start="login"/>
+    <extension point="xbmc.python.library" library="check_idle.py"/>
+    <extension point="xbmc.addon.metadata">
+        <platform>linux</platform>
+        <summary lang="en">Inhibit idle shutdown when background processes are active.</summary>
+        <summary lang="de">Herunterfahren oder Standby bei aktiven Hintergrundprozessen verhindern.</summary>
+        <description lang="en">The service will periodically reset the idle shutdown timer when it detetcs one of the monitored processes or connections active, or - in case the PVR backend is hosted locally - when a recording is due or remote PVR clients are connected.</description>
+        <description lang="de">Der Dienst resettet in regelmäßigen Abständen den Idle Shutdown Timer wenn ein überwachter Prozess oder eine überwachte Verbindung aktiv ist, oder - falls das PVR Backend auf dem lokalen System läuft - wenn eine Aufnahme kurz bevorsteht oder nicht-lokale PVR Clients verbunden sind.</description>
+        <disclaimer lang="en">Use at your own risk</disclaimer>
+        <disclaimer lang="de">Benutzung auf eigene Gefahr</disclaimer>
+    </extension>
+</addon>
