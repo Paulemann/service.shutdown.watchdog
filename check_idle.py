@@ -222,7 +222,7 @@ def parse_settings(xmlFile):
 def load_settings():
     global watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, prefix, busy_notification
 
-    prefix = time.strftime('%b %d %H:%M:%S') + ' ' + basename(sys.argv[0])
+    prefix = time.strftime('%b %d %H:%M:%S') + ' ' + os.path.basename(sys.argv[0])
 
     # Defaults:
     busy_notification = 'Notification(Action cancelled, Background activities detected)'
@@ -249,8 +249,8 @@ def load_settings():
         data = json_request(GET_ADDON_PATH, 'localhost')
         if data['result']:
             path = data['result']['addon']['path']
-            p1 = dirname(dirname(path))
-            p2 = basename(path)
+            p1 = os.path.dirname(dirname(path))
+            p2 = os.path.basename(path)
             settings_xml = p1 + '/userdata/addon_data/' + p2 + '/settings.xml'
 
             settings = parse_settings(settings_xml)
