@@ -224,8 +224,8 @@ def load_settings():
     pvr_minsecs = 600 # 10 mins.
 
     watched_local = {445, 2049}      #smb, nfs, or 'set()' for empty set
-    watched_remote = {22, 445, 8443} #ssh, smb, vdrlive
-    watched_procs = {'HandBrakeCLI', 'ffmpeg', 'makemkv' , 'makemkvcon', 'convert.sh'}
+    watched_remote = {22, 445}       #ssh, smb
+    watched_procs = {'HandBrakeCLI', 'ffmpeg', 'makemkv' , 'makemkvcon'}
 
     try:
         # Parse settings.xml if addon is installed:
@@ -243,7 +243,8 @@ def load_settings():
             path = data['result']['addon']['path']
             p1 = os.path.dirname(os.path.dirname(path))
             p2 = os.path.basename(path)
-            settings_xml = p1 + '/userdata/addon_data/' + p2 + '/settings.xml'
+            #settings_xml = p1 + '/userdata/addon_data/' + p2 + '/settings.xml'
+            settings_xml = os.path.join(p1, 'userdata', 'addon_data', p2, 'settings.xml')
 
             settings = parse_settings(settings_xml)
             if settings:
