@@ -54,16 +54,16 @@ def read_set(string):
 
 
 def load_addon_settings():
-    global sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
+    global __sleep_time__, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
 
     #busy_notification = 'Notification(Action cancelled, Background activities detected)'
     #busy_notification = 'Notification(Aktion abgebrochen, Hintergrundaktivitäten festgestellt)'
     busy_notification = 'Notification(' + __localize__('30008') + ')'
 
     try:
-        sleep_time = int(__setting__('sleep'))
+        __sleep_time__ = int(__setting__('sleep'))
     except ValueError:
-        sleep_time = 60
+        __sleep_time__ = 60
 
     try:
         pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
@@ -112,7 +112,8 @@ if __name__ == '__main__':
     load_addon_settings()
 
     while not monitor.abortRequested():
-        #xbmc.ExecuteBuiltIn('RunnScript...')
+        #cmd = 'RunScript(' + __addon_id__ + '\'InhibitIdleShutdown(true)\', \'InhibitIdleShutdown(false)\')'
+        #xbmc.executebuiltin(cmd)
         check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
-        if monitor.waitForAbort(float(sleep_time)):
+        if monitor.waitForAbort(float(__sleep_time__)):
             break
