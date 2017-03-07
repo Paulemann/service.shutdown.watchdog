@@ -17,31 +17,31 @@ class MyMonitor( xbmc.Monitor ):
         xbmc.Monitor.__init__( self )
 
     def onSettingsChanged( self ):
-        try:
-            sleep_time = int(__setting__('sleep'))
-        except ValueError:
-            xbmc.log(msg='[{}] Error loading settings. Abort.'.format(__addon_id__), level=xbmc.LOGNOTICE)
-            sys.exit(1)
-        xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+        load_settings()
+
+
+def load_settings():
+    try:
+        sleep_time = int(__setting__('sleep'))
+    except ValueError:
+        xbmc.log(msg='[{}] Error loading settings. Abort.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+        return False
+
+    xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+    return True
 
 
 if __name__ == '__main__':
     monitor = MyMonitor()
     xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
-    try:
-        sleep_time = int(__setting__('sleep'))
-    except ValueError:
-        xbmc.log(msg='[{}] Error loading settings. Abort.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+    if not load_settings()
         sys.exit(1)
-    xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
     while not monitor.abortRequested():
         #cmd = 'RunScript(' + __addon_id__ + '\'InhibitIdleShutdown(true)\', \'InhibitIdleShutdown(false)\')'
         #xbmc.executebuiltin(cmd)
-        idle = check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
-        #if idle:
-        #   xbmc.log(msg='[{}] System idle.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+        check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
         if monitor.waitForAbort(float(sleep_time)):
             break
             
