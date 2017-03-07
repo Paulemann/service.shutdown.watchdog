@@ -26,7 +26,8 @@ if __name__ == '__main__':
     try:
         sleep_time = int(__setting__('sleep'))
     except ValueError:
-        sleep_time = 300   # default: check every 5 mins.
+        xbmc.log(msg='[{}] Error loading settings. Abort.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+        sys.exit(1)
     xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
     while not monitor.abortRequested():
@@ -35,3 +36,5 @@ if __name__ == '__main__':
         check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
         if monitor.waitForAbort(float(sleep_time)):
             break
+            
+    sys.exit(0)
