@@ -47,10 +47,8 @@ codecs.register_error('mixed', mixed_decoder)
 
 
 def get_opts():
-    global idle_action, busy_action
-
-    idle_action= ''
     busy_action = ''
+    idle_action = ''
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "i:b:?", ["idle-action=", "busy-action=", "help"])
@@ -72,7 +70,7 @@ def get_opts():
     if busy_action and ((busy_action[0] == '\'' and busy_action[-1] == '\'') or (busy_action[0] == '\"' and busy_action[-1] == '\"')):
         busy_action = busy_action[1:-1]
 
-    return
+    return busy_action, idle_action
 
 
 def get_pid(name):
@@ -379,7 +377,6 @@ def check_idle(arg_busy_action, arg_idle_action):
 
 
 if __name__ == '__main__':
-    get_opts()
     load_addon_settings()
+    busy_action, idle_action = get_opts()
     check_idle(busy_action, idle_action)
-    
