@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="service.shutdown.watchdog" name="Shutdown Watchdog Service" version="0.4" provider-name="Paulemann">
+<addon id="service.shutdown.watchdog" name="Shutdown Watchdog Service" version="0.42" provider-name="Paulemann">
     <requires>
         <import addon="xbmc.python" version="2.24.0"/>
         <import addon="xbmc.json" version="6.32.4"/>
