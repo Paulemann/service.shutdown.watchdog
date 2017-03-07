@@ -118,7 +118,6 @@ def port_trans(plist):
             try:
                 ret.add(int(PORT_DICT[p.lower()]))
             except:
-                log('Unknown port \'{}\'.'.format(p))
                 continue
     return ret
 
@@ -245,10 +244,8 @@ def check_pvrclients():
                 data = json_request(GET_ITEM, client)
 
                 if  data['result']['item']['type'] == 'channel':
-                    log('Live TV is being watched from IP address {}.'.format(client))
                     return True # a client is watching live-tv
                 elif 'pvr://' == urllib2.unquote(data['result']['item']['file'].encode('utf-8'))[:6]:
-                    log('A recording is being watched from IP address {}.'.format(client))
                     return True # a client is watching a recording
 
         except:
@@ -293,11 +290,9 @@ def check_timers():
                     secs_before_recording = starttime - now
 
                 if secs_before_recording > 0 and secs_before_recording < pvr_minsecs:
-                    log('Recording scheduled in less than {} min.'.format(pvr_minsecs/60))
                     return True
 
                 if secs_before_recording < 0:
-                    log('Found active recording.')
                     return True
 
     # Sometimes we get a key error, maybe beacause pvr backend 
@@ -319,7 +314,6 @@ def check_procs():
         proc = items[4];
         #if proc in watched_procs:
         if proc.lower() in [element.lower() for element in watched_procs]:
-            log('Found active process of {}.'.format(proc))
             return True
 
     return False
@@ -346,7 +340,6 @@ def check_services():
 
         if ((local_addr != remote_addr) and (local_port in watched_remote)) or \
             ((local_addr == remote_addr) and (local_port in watched_local)):
-            log('Found connection from {} to {}:{}.'.format(remote_addr, local_addr, local_port))
             return True
 
     return False
@@ -354,23 +347,14 @@ def check_services():
 
 def check_idle(arg_busy_action, arg_idle_action):
     if check_pvrclients() or check_timers() or check_services() or check_procs():
-        log('Background activities detected.')
-
         if arg_busy_action:
-            log('Sending action \'{}\' ...'.format(arg_busy_action))
             xbmc.executebuiltin(arg_busy_action)
-
         elif arg_idle_action:
-            log('Action \'{}\' cancelled.'.format(arg_idle_action))
             xbmc.executebuiltin(busy_notification)
 
         return True
-
     else:
-        log('No background activities detected.')
-
         if arg_idle_action:
-            log('Sending action \'{}\' ...'.format(arg_idle_action))
             xbmc.executebuiltin(arg_idle_action)
 
         return False
