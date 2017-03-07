@@ -24,19 +24,17 @@ def load_settings():
     try:
         sleep_time = int(__setting__('sleep'))
     except ValueError:
-        xbmc.log(msg='[{}] Error loading settings. Abort.'.format(__addon_id__), level=xbmc.LOGNOTICE)
-        return False
+        sleep_time = 60
 
     xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
-    return True
+    return
 
 
 if __name__ == '__main__':
     monitor = MyMonitor()
     xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
-    if not load_settings()
-        sys.exit(1)
+    load_settings()
 
     while not monitor.abortRequested():
         #cmd = 'RunScript(' + __addon_id__ + '\'InhibitIdleShutdown(true)\', \'InhibitIdleShutdown(false)\')'
@@ -44,5 +42,3 @@ if __name__ == '__main__':
         check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
         if monitor.waitForAbort(float(sleep_time)):
             break
-            
-    sys.exit(0)
