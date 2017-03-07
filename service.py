@@ -7,8 +7,9 @@ from check_idle import check_idle
 
 
 __addon__ = xbmcaddon.Addon()
+__setting__ = __addon__.getSetting
 __addon_id__ = __addon__.getAddonInfo('id')
-
+__localize__ = __addon__.getLocalizedString
 
 class MyMonitor( xbmc.Monitor ):
     def __init__( self, *args, **kwargs ):
