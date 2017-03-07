@@ -111,47 +111,19 @@ def load_addon_settings():
     busy_notification = 'Notification(' + __localize__('30008') + ')'
 
     try:
-        sleep_time = int(__setting__('sleep'))
-    except ValueError:
-        sleep_time = 60
-
-    try:
         pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
-    except ValueError:
-        pvr_minsecs = 5 * 60
-
-    try:
         pvr_port = int(__setting__('pvrport'))
-    except ValueError:
-        pvr_port = 34890
-
-    try:
-        if __setting__('pvrlocal') == 'false':
-            pvr_local = False
-        else:
-            pvr_local = True
-    except ValueError:
-        pvr_local = True
-
-    try:
+        pvr_local = bool(__setting__('pvrlocal') != 'false')
         watched_local = read_set(__setting__('localports'))
-    except:
-        watched_local = {445, 2049}      #smb, nfs, or 'set()' for empty set
-
-    try:
         watched_remote = read_set(__setting__('remoteports'))
-    except:
-        watched_remote = {22, 445}       #ssh, smb
-
-    try:
         watched_procs = read_set(__setting__('procs'))
     except:
-        watched_procs = {'HandBrakeCLI', 'ffmpeg', 'makemkv' , 'makemkvcon'}
+         return False
 
     watched_local = port_trans(watched_local)
     watched_remote = port_trans(watched_remote)
 
-    return
+    return True
 
 
 def json_request(kodi_request, host):
@@ -337,15 +309,16 @@ def check_idle(arg_busy_action, arg_idle_action):
         elif arg_idle_action:
             xbmc.executebuiltin(busy_notification)
 
-        return False
+        return 1
     else:
         if arg_idle_action:
             xbmc.executebuiltin(arg_idle_action)
 
-        return True
+        return 0
 
 
 if __name__ == '__main__':
-    load_addon_settings()
+    if not load_addon_settings():
+        sys.exit(1)
     busy_action, idle_action = get_opts()
-    check_idle(busy_action, idle_action)
+    sys.exit(check_idle(busy_action, idle_action))
