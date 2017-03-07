@@ -115,7 +115,7 @@ def load_settings():
     global watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
 
     # Defaults:
-    busy_notification = 'Notification(' + __localize__('30008') + ')'
+    busy_notification = 'Notification(' + __localize__(30008) + ')'
 
     try:
         pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
