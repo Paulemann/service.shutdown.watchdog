@@ -108,22 +108,43 @@ def read_set(string):
 def load_settings():
     global watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
 
+    # Defaults:
     busy_notification = 'Notification(' + __localize__('30008') + ')'
 
     try:
         pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
+    except ValueError:
+        pvr_minsecs = 300 # 5 mins.
+
+    try:
         pvr_port = int(__setting__('pvrport'))
+    except ValueErrror:
+        pvr_port = 34890  # VDR-VNSI
+
+    try:
         pvr_local = True if __setting__('pvrlocal').lower() == 'true' else False
+    except:
+        pvr_local = True  # PVR backend on local system
+
+    try:
         watched_local = read_set(__setting__('localports'))
+    except:
+        watched_local = {445, 2049}      #smb, nfs, or 'set()' for empty set
+
+    try:
         watched_remote = read_set(__setting__('remoteports'))
+    except:
+        watched_remote = {22, 445}       #ssh, smb
+
+    try:
         watched_procs = read_set(__setting__('procs'))
     except:
-        return False
+        watched_procs = {'HandBrakeCLI', 'ffmpeg', 'makemkv' , 'makemkvcon'}
 
     watched_local = port_trans(watched_local)
     watched_remote = port_trans(watched_remote)
 
-    return True
+    return
 
 
 def json_request(kodi_request, host):
@@ -318,7 +339,6 @@ def check_idle(arg_busy_action, arg_idle_action):
 
 
 if __name__ == '__main__':
-    if not load_settings():
-        sys.exit(1)
+    load_settings():
     busy_action, idle_action = get_opts()
     sys.exit(check_idle(busy_action, idle_action))
