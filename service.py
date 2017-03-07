@@ -29,7 +29,7 @@ def load_addon_settings():
     except ValueError:
         sleep_time = 60  # 1 min.
 
-    check_idle. busy_notification = 'Notification({})'.format(__localize__(30008).encode('utf-8'))
+    check_idle.busy_notification = 'Notification({})'.format(__localize__(30008).encode('utf-8'))
 
     try:
         check_idle.pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     load_addon_settings()
 
     while not monitor.abortRequested():
-        #cmd = 'RunScript(' + __addon_id__ + '\'InhibitIdleShutdown(true)\', \'InhibitIdleShutdown(false)\')'
+        #cmd = 'RunScript({}, \'InhibitIdleShutdown(true)\', \'InhibitIdleShutdown(false)\')'.format(__addon_id__)
         #xbmc.executebuiltin(cmd)
         check_idle.check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
         if monitor.waitForAbort(float(sleep_time)):
