@@ -105,7 +105,7 @@ def read_set(string):
     return ret
 
 
-def load_addon_settings():
+def load_settings():
     global watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
 
     busy_notification = 'Notification(' + __localize__('30008') + ')'
@@ -113,12 +113,12 @@ def load_addon_settings():
     try:
         pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
         pvr_port = int(__setting__('pvrport'))
-        pvr_local = bool(__setting__('pvrlocal') != 'false')
+        pvr_local = True if __setting__('pvrlocal').lower() == 'true' else False
         watched_local = read_set(__setting__('localports'))
         watched_remote = read_set(__setting__('remoteports'))
         watched_procs = read_set(__setting__('procs'))
     except:
-         return False
+        return False
 
     watched_local = port_trans(watched_local)
     watched_remote = port_trans(watched_remote)
@@ -318,7 +318,7 @@ def check_idle(arg_busy_action, arg_idle_action):
 
 
 if __name__ == '__main__':
-    if not load_addon_settings():
+    if not load_settings():
         sys.exit(1)
     busy_action, idle_action = get_opts()
     sys.exit(check_idle(busy_action, idle_action))
