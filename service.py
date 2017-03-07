@@ -10,14 +10,19 @@ from check_idle import check_idle
 __addon__ = xbmcaddon.Addon()
 __setting__ = __addon__.getSetting
 __addon_id__ = __addon__.getAddonInfo('id')
-__localize__ = __addon__.getLocalizedString
+
 
 class MyMonitor( xbmc.Monitor ):
     def __init__( self, *args, **kwargs ):
         xbmc.Monitor.__init__( self )
 
     def onSettingsChanged( self ):
-        load_addon_settings()
+        try:
+            sleep_time = int(__setting__('sleep'))
+        except ValueError:
+            xbmc.log(msg='[{}] Error loading settings. Abort.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+            sys.exit(1)
+        xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
 
 if __name__ == '__main__':
