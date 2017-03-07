@@ -24,8 +24,6 @@ if __name__ == '__main__':
     load_addon_settings()
 
     while not monitor.abortRequested():
-        state = check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
-        #if state == 0:
-        #    xbmc.log(msg='[{}] No background sctivities detected. Idle system may shutdown or suspend.'.format(addon.getAddonInfo('id')), level=xbmc.LOGNOTICE)
+        check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
         if monitor.waitForAbort(float(sleep_time)):
             break
