@@ -39,7 +39,9 @@ if __name__ == '__main__':
     while not monitor.abortRequested():
         #cmd = 'RunScript(' + __addon_id__ + '\'InhibitIdleShutdown(true)\', \'InhibitIdleShutdown(false)\')'
         #xbmc.executebuiltin(cmd)
-        check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
+        idle = check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
+        #if idle:
+        #   xbmc.log(msg='[{}] System idle.'.format(__addon_id__), level=xbmc.LOGNOTICE)
         if monitor.waitForAbort(float(sleep_time)):
             break
             
