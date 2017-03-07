@@ -60,3 +60,7 @@ msgstr "Wachzeit vor Aufnahmestart (in Minuten)"
 msgctxt "#30007"
 msgid "Time between checks (seconds)"
 msgstr "Zeit zwischen Überprüfungen (in Sek.)"
+
+msgctxt "#30008"
+msgid "Action cancelled, Background activities detected"
+msgstr "Aktion abgebrochen, Hintergrundaktivitäten festgestellt"

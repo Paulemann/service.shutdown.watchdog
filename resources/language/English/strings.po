@@ -60,3 +60,8 @@ msgstr ""
 msgctxt "#30007"
 msgid "Time between checks (seconds)"
 msgstr ""
+
+msgctxt "#30008"
+msgid "Action cancelled, Background activities detected"
+msgstr ""
+
