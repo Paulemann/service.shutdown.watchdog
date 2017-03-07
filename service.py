@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import sys
 import xbmc
 import xbmcaddon
 
