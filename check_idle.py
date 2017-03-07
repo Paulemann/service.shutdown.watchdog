@@ -339,6 +339,6 @@ def check_idle(arg_busy_action, arg_idle_action):
 
 
 if __name__ == '__main__':
-    load_settings():
+    load_settings()
     busy_action, idle_action = get_opts()
     sys.exit(check_idle(busy_action, idle_action))
