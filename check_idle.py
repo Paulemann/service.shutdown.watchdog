@@ -22,12 +22,6 @@ import codecs
 from service import watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
 
 
-__addon__ = xbmcaddon.Addon()
-__setting__ = __addon__.getSetting
-__addon_id__ = __addon__.getAddonInfo('id')
-__localize__ = __addon__.getLocalizedString
-
-
 #
 # Source: http://stackoverflow.com/questions/10009753/python-dealing-with-mixed-encoding-files
 #
@@ -262,12 +256,12 @@ def check_idle(arg_busy_action, arg_idle_action):
         elif arg_idle_action:
             xbmc.executebuiltin(busy_notification)
 
-        return True
+        return False
     else:
         if arg_idle_action:
             xbmc.executebuiltin(arg_idle_action)
 
-        return False
+        return True
 
 
 if __name__ == '__main__':
