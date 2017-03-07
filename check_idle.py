@@ -1,11 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-# run standalone as check_idle.py
-# or from main script do:
-#import check_idle
-#check_idle.check_idle(busy_action, idle_action)
-
 #
 # Source https://github.com/bluecube/service.inhibit_shutdown
 #
