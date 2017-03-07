@@ -28,7 +28,7 @@ def load_addon_settings():
     except ValueError:
         sleep_time = 60  # 1 min.
 
-    check_idle.busy_notification = 'Notification(' + __localize__('30008') + ')'
+    check_idle.busy_notification = 'Notification(' + __localize__(30008) + ')'
 
     try:
         check_idle.pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
