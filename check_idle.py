@@ -20,6 +20,12 @@ from contextlib import closing
 import codecs
 
 
+__addon__ = xbmcaddon.Addon()
+__setting__ = __addon__.getSetting
+__addon_id__ = __addon__.getAddonInfo('id')
+__localize__ = __addon__.getLocalizedString
+
+
 #
 # Source: http://stackoverflow.com/questions/10009753/python-dealing-with-mixed-encoding-files
 #
