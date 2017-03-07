@@ -261,8 +261,8 @@ def check_timers():
     localhost = '127.0.0.1'
 
     if localhost not in find_clients(pvr_port, True):
-        log('Check timers: localhost not connected to pvr backend.')
         return False
+
     #if int(subprocess.check_output(['/bin/pidof', '-s', 'vdr'])) > 0:
     #   return False
 
