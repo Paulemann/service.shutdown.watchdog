@@ -4,7 +4,7 @@
 import xbmc
 import xbmcaddon
 
-import check_idle, load_addon_settings, get_sleep_time
+from check_idle import check_idle, load_addon_settings, get_sleep_time
 
 
 __addon__ = xbmcaddon.Addon()
