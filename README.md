@@ -9,8 +9,8 @@ is hosted locally - when a recording is due or remote PVR clients are connected.
 One may also leverage the addon to prevent shutdown or suspend while background
 activities are deteted when the respective action is triggered by a remote 
 or power button press. To this purpose you need to add the following lines to
-the keymap.xml file in ~/.kodi/userdata/keymaps:
-
+the the remote.xml or keymap.xml file in ~/.kodi/userdata/keymaps:
+```
 </keymap>
   <global>
     <keyboard>
@@ -19,3 +19,4 @@ the keymap.xml file in ~/.kodi/userdata/keymaps:
      </keyboard>
   </global>
 </keymap>
+```
