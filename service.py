@@ -4,7 +4,7 @@
 import xbmc
 import xbmcaddon
 
-import check_idle
+import check_idle, load_addon_settings, sleep_time
 
 
 __addon__ = xbmcaddon.Addon()
@@ -78,6 +78,6 @@ if __name__ == '__main__':
     while not monitor.abortRequested():
         #cmd = 'RunScript({}, \'InhibitIdleShutdown(true)\', \'InhibitIdleShutdown(false)\')'.format(__addon_id__)
         #xbmc.executebuiltin(cmd)
-        check_idle.check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
+        check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
         if monitor.waitForAbort(float(sleep_time)):
             break
