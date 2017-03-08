@@ -112,14 +112,14 @@ def read_set(string):
 
 
 def load_addon_settings():
-    global sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
+    global sleep_interval, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
 
     busy_notification = 'Notification({})'.format(__localize__(30008).encode('utf-8'))
 
     try:
-        sleep_time = int(__setting__('sleep'))
+        sleep_interval = int(__setting__('sleep'))
     except ValueError:
-        sleep_time = 60  # 1 min.
+        sleep_interval = 60  # 1 min.
 
     try:
         pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
@@ -154,9 +154,11 @@ def load_addon_settings():
     watched_local = port_trans(watched_local)
     watched_remote = port_trans(watched_remote)
     
-    xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
-
     return
+
+
+def sleep_time():
+    return sleep_interval
 
 
 def json_request(kodi_request, host):
