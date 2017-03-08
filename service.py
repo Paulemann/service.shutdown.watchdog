@@ -4,8 +4,9 @@
 import xbmc
 import xbmcaddon
 
-import check_idle, load_addon_settings, sleep_time
+xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
+import check_idle, load_addon_settings, sleep_time
 
 __addon__ = xbmcaddon.Addon()
 __setting__ = __addon__.getSetting
@@ -23,10 +24,8 @@ class MyMonitor( xbmc.Monitor ):
         
 if __name__ == '__main__':
     monitor = MyMonitor()
-    xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
-    #load_addon_settings()
 
     while not monitor.abortRequested():
         check_idle('InhibitIdleShutdown(true)', 'InhibitIdleShutdown(false)')
-        if monitor.waitForAbort(float(sleep_time)):
+        if monitor.waitForAbort(float(sleep_time())):
             break
