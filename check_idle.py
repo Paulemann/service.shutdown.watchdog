@@ -46,7 +46,7 @@ def get_opts():
     busy_action = ''
     
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "i:b:?", ["idle-action=", "busy-action=", "help"])
+        opts, args = getopt.getopt(sys.argv[1:], "i:b:", ["idle-action=", "busy-action="])
     except getopt.GetoptError, err:
         return
 
