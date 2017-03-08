@@ -111,10 +111,15 @@ def read_set(string):
     return ret
 
 
-def load_settings():
-    global watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
+def load_addon_settings():
+    global sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
 
     busy_notification = 'Notification({})'.format(__localize__(30008).encode('utf-8'))
+
+    try:
+        sleep_time = int(__setting__('sleep'))
+    except ValueError:
+        sleep_time = 60  # 1 min.
 
     try:
         pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
@@ -343,7 +348,9 @@ def check_idle(arg_busy_action, arg_idle_action):
         return 0
 
 
+load_addon_settings()
+
+
 if __name__ == '__main__':
-    load_settings()
     busy_action, idle_action = get_opts()
     sys.exit(check_idle(busy_action, idle_action))
