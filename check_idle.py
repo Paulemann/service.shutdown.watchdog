@@ -343,7 +343,6 @@ def check_idle(arg_idle_action, arg_busy_action):
             xbmc.executebuiltin(arg_busy_action)
         elif arg_idle_action:
             xbmc.executebuiltin(busy_notification)
-            xbmc.log(msg='[{}] Action \'{}\' cancelled. Background activities detected.'.format(__addon_id__, arg_idle_action), level=xbmc.LOGNOTICE)
     else:
         if arg_idle_action:
             xbmc.executebuiltin(arg_idle_action)
@@ -354,5 +353,4 @@ load_addon_settings()
 
 
 if __name__ == '__main__':
-    idle_action, busy_action = get_opts()
-    sys.exit(check_idle(idle_action, busy_action))
+    check_idle(*get_opts())
