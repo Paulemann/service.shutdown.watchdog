@@ -154,7 +154,8 @@ def load_addon_settings():
     watched_local = port_trans(watched_local)
     watched_remote = port_trans(watched_remote)
     
-    xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+    if __name__ != '__main__':
+        xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
     return
 
@@ -352,9 +353,10 @@ def check_idle(arg_idle_action, arg_busy_action):
     return
 
 
-xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
-load_addon_settings()
-
-
 if __name__ == '__main__':
+    load_addon_settings()
     check_idle(*get_opts())
+else:
+    xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+    load_addon_settings()
+    
