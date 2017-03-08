@@ -42,9 +42,9 @@ codecs.register_error('mixed', mixed_decoder)
 
 
 def get_opts():
-    busy_action = ''
     idle_action = ''
-
+    busy_action = ''
+    
     try:
         opts, args = getopt.getopt(sys.argv[1:], "i:b:?", ["idle-action=", "busy-action=", "help"])
     except getopt.GetoptError, err:
@@ -65,7 +65,7 @@ def get_opts():
     if busy_action and ((busy_action[0] == '\'' and busy_action[-1] == '\'') or (busy_action[0] == '\"' and busy_action[-1] == '\"')):
         busy_action = busy_action[1:-1]
 
-    return busy_action, idle_action
+    return idle_action, busy_action 
 
 
 def get_pid(name):
@@ -153,6 +153,8 @@ def load_addon_settings():
 
     watched_local = port_trans(watched_local)
     watched_remote = port_trans(watched_remote)
+    
+    xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
     return
 
@@ -333,24 +335,22 @@ def check_services():
     return False
 
 
-def check_idle(arg_busy_action, arg_idle_action):
+def check_idle(arg_idle_action, arg_busy_action):
     if check_pvrclients() or check_timers() or check_services() or check_procs():
         if arg_busy_action:
             xbmc.executebuiltin(arg_busy_action)
         elif arg_idle_action:
             xbmc.executebuiltin(busy_notification)
-
-        return 1
+            xbmc.log(msg='[{}] Action \'{}\' cancelled. Background activities detected.'.format(__addon_id__, arg_idle_action), level=xbmc.LOGNOTICE)
     else:
         if arg_idle_action:
             xbmc.executebuiltin(arg_idle_action)
-
-        return 0
+    return
 
 
 load_addon_settings()
 
 
 if __name__ == '__main__':
-    busy_action, idle_action = get_opts()
-    sys.exit(check_idle(busy_action, idle_action))
+    idle_action, busy_action = get_opts()
+    sys.exit(check_idle(idle_action, busy_action))
