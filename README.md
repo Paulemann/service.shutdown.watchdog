@@ -9,7 +9,7 @@ is hosted locally - when a recording is due or remote PVR clients are connected.
 In the configuration dialog one may enter either the specific tcp port to be monitored or use 
 the following keywords for well known tcp connections:
 ```
-'ftp-data': 20, 
+'ftp-data':20, 
 'ftp':21, 
 'ssh':22, 
 'telnet':23, 
