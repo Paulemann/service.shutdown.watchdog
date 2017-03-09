@@ -51,3 +51,14 @@ the the keymap.xml file in ~/.kodi/userdata/keymaps:
   </global>
 </keymap>
 ```
+The addon supports only Linux platforms. Currently only German and English 
+translations are provided.
+
+The addon was developed and tested on Ubuntu Desktop 16.04 with Kodi 17 
+(Krypton). However, use at your own risk and please be aware that the 
+addon code is still in beta status.
+
+To install simply download the addon files as zip file and install from
+the Kodi addon section.
+
+My special credits go to 
