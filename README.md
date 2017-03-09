@@ -35,6 +35,8 @@ protocol id         tcp port
 'vnsi-server'          34890
 ```
 
+Both incoming (local ports) and outgoing (remote ports) connections are monitored.
+
 One may also leverage the addon to prevent shutdown or suspend while background
 activities are deteted when the respective action is triggered by a remote 
 or power button press. To this purpose you need to add the following lines to
