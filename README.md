@@ -7,7 +7,7 @@ one of the monitored processes or connections active, or - in case the PVR backe
 is hosted locally - when a recording is due or remote PVR clients are connected.
 
 In the configuration dialog one may enter either the specific tcp port to be monitored or use 
-the following keywords for well known tcp connections:
+the following keywords:
 ```
 keyword    tcp port
 -------------------
