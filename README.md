@@ -1,6 +1,6 @@
 # service.shutdown.watchdog
 
-kodi addon to inhibit shutdown or suspend when background processes are active.
+Kodi addon to inhibit shutdown or suspend when background activities are detected.
 
 This service addon will periodically reset the idle shutdown timer when it detetcs 
 one of the monitored processes or connections active, or - in case the PVR backend 
