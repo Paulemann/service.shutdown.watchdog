@@ -61,4 +61,6 @@ addon code is still in beta status.
 To install simply download the addon files as zip file and install from
 the Kodi addon section.
 
-My special credits go to 
+My special credits go to blucube and his service.inhibit_shutdown addon
+https://github.com/bluecube/service.inhibit_shutdown from whom I "borrowed"
+the initial code and idea.
