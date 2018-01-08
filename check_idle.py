@@ -1,24 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-# run standalone as check_idle.py
-# or from main script do:
-#import check_idle
-#check_idle.check_idle(busy_action, idle_action)
-
 #
 # Source https://github.com/bluecube/service.inhibit_shutdown
 #
-from __future__ import print_function
-
 import xbmc
-import subprocess
+import xbmcaddon
 
+import subprocess
 import os
 import time
 import sys
 import getopt
-from socket import *
 
 import json
 import urllib2
@@ -26,15 +19,14 @@ from contextlib import closing
 
 import codecs
 
-try:
-    from xbmc.xbmcclient import *
-except:
-    sys.exc_clear()
-    #pass
-    # we may ignore the exception
-    # since the module is not required in this case
 
-from lxml import etree
+__addon__ = xbmcaddon.Addon()
+__setting__ = __addon__.getSetting
+__addon_id__ = __addon__.getAddonInfo('id')
+__localize__ = __addon__.getLocalizedString
+
+#kodi = 'kodi'
+kodi = 'kodi-standalone'
 
 #
 # Source: http://stackoverflow.com/questions/10009753/python-dealing-with-mixed-encoding-files
@@ -51,43 +43,20 @@ def mixed_decoder(unicode_error):
 codecs.register_error('mixed', mixed_decoder)
 
 
-def usage():
-    print('Usage: {} [OPTION]'.format(os.path.basename(sys.argv[0])))
-    print('Check system for configured background activities. Optionally, send action to kodi depending on current state (idle/busy).')
-    print('\nExit status: \t0 (No background activities detected) or \n\t\t1 (Backgroung activities detected)')
-    print('\nMonitored background activities are defined in \'settings.xml\' if addon is intalled.')
-    print('By default the following processes and connections are monitored: nfs, smb, ssh, HandbrakeCLI, ffmpeg, makemkv, and makemkvcon.')
-    print('\nOptions:')
-    print('  -?, --help              \tWill bring up this message.')
-    print('  -b, --busy-action=ACTION\tSends ACTION to kodi when background activies are detected.')
-    print('  -i, --idle-action=ACTION\tSends ACTION to kodi when no background activies are detected.')
-    print('  ACTION                  \tSends ACTION to kodi when no background activies are detected.')
-    print('\n  ACTION must be one of KODI\'s built-in functions.')
-    print('  See: http://kodi.wiki/view/List_of_built-in_functions')
-    print('\nExample: {} --idle-action="suspend"'.format(os.path.basename(sys.argv[0])))
-    sys.exit(-1)
-
-
 def get_opts():
-    global idle_action, busy_action
-
-    idle_action= ''
+    idle_action = ''
     busy_action = ''
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "i:b:?", ["idle-action=", "busy-action=", "help"])
+        opts, args = getopt.getopt(sys.argv[1:], "i:b:", ["idle-action=", "busy-action="])
     except getopt.GetoptError, err:
-        usage()
+        return
 
     for opt, arg in opts:
-        if opt in ("-?", "--help"):
-            usage()
-        elif opt in ("-i", "--idle-action"):
+        if opt in ("-i", "--idle-action"):
             idle_action = arg
         elif opt in ("-b", "--busy-action"):
             busy_action = arg
-        else:
-            usage()
 
     if len(args) == 1 and not idle_action:
         idle_action = args[0]
@@ -98,16 +67,7 @@ def get_opts():
     if busy_action and ((busy_action[0] == '\'' and busy_action[-1] == '\'') or (busy_action[0] == '\"' and busy_action[-1] == '\"')):
         busy_action = busy_action[1:-1]
 
-    return
-
-
-def log(msg):
-    if len(sys.argv) == 1:
-        try:
-            xbmc.log(msg='[{}] {}'.format(prefix, msg), level=xbmc.LOGNOTICE)
-        except:
-            print('[{}] {}'.format(prefix, msg))
-    return
+    return idle_action, busy_action 
 
 
 def get_pid(name):
@@ -119,41 +79,24 @@ def get_pid(name):
     return pid
 
 
-def xbmc_send(action):
-    ip = 'localhost'
-    port = 9777
+def kodi_is_running():
+    #procs = subprocess.check_output(['/usr/bin/pgrep', 'kodi'], universal_newlines=True)
+    # return procs != ''
 
-    try:
-        xbmc.executebuiltin(action)
-    except AttributeError:
-        addr = (ip, port)
-        sock = socket(AF_INET,SOCK_DGRAM)
-        packet = PacketACTION(actionmessage=action, actiontype=ACTION_BUTTON)
-        packet.send(sock, addr)
+    procs = subprocess.check_output(['/bin/ps', 'cax'], universal_newlines=True)
 
-    return
+    lines = procs.split('\n')[1:]
 
+    for line in lines:
+        items = line.split()
+        if len(items) < 5:
+            continue
 
-def json_request(kodi_request, host):
-    # http://host:8080/jsonrpc?request=kodi_request
+        proc = items[4];
+        if proc == kodi:
+            return True
 
-    PORT   =    8080
-    URL    =    'http://' + host + ':' + str(PORT) + '/jsonrpc'
-    HEADER =    {'Content-Type': 'application/json'}
-
-    try:
-        if host == 'localhost':
-            response = xbmc.executeJSONRPC(json.dumps(kodi_request))
-            if response:
-                return json.loads(response.decode('utf8','mixed'))
-    except AttributeError:
-        pass
-
-    request = urllib2.Request(URL, json.dumps(kodi_request), HEADER)
-    with closing(urllib2.urlopen(request)) as response:
-        #return json.loads(response.read())
-        #return json.loads(response.read().decode('utf8', errors='replace').replace(u'\ufffd','?'))
-        return json.loads(response.read().decode('utf8', 'mixed'))
+    return False
 
 
 def is_number(s):
@@ -175,7 +118,6 @@ def port_trans(plist):
             try:
                 ret.add(int(PORT_DICT[p.lower()]))
             except:
-                log('Unknown port \'{}\'.'.format(p))
                 continue
     return ret
 
@@ -191,119 +133,87 @@ def read_set(string):
     return ret
 
 
-def parse_settings(xmlFile):
-    settings = []
+def load_addon_settings():
+    global sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
+
+    busy_notification = 'Notification({})'.format(__localize__(30008).encode('utf-8'))
 
     try:
-        context = etree.iterparse(xmlFile)
-    except IOError:
-        return settings
-
-    for action, elem in context:
-        if elem.tag == 'setting':
-            if not elem.attrib:
-                attrib = {}
-            else:
-                attrib = elem.attrib
-            settings.append(attrib)
-
-    return settings
-
-
-def load_settings():
-    global watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, prefix, busy_notification
-
-    prefix = time.strftime('%b %d %H:%M:%S') + ' ' + os.path.basename(sys.argv[0])
-
-    # Defaults:
-    busy_notification = 'Notification(Action cancelled, Background activities detected)'
-
-    pvr_local = True  # PVR backend on local system
-    pvr_port = 34890  # VDR-VNSI
-    pvr_minsecs = 600 # 10 mins.
-
-    watched_local = {445, 2049}      #smb, nfs, or 'set()' for empty set
-    watched_remote = {22, 445}       #ssh, smb
-    watched_procs = {'HandBrakeCLI', 'ffmpeg', 'makemkv' , 'makemkvcon'}
+        sleep_time = int(__setting__('sleep'))
+    except ValueError:
+        sleep_time = 60  # 1 min.
 
     try:
-        # Parse settings.xml if addon is installed:
-        GET_ADDON_PATH = {
-            'jsonrpc': '2.0',
-            'method': 'Addons.GetAddonDetails',
-            'params': {
-                'addonid': 'service.shutdown.watchdog',
-                'properties': ['path']
-            },
-            'id': 1
-        }
-        data = json_request(GET_ADDON_PATH, 'localhost')
-        if data['result']:
-            path = data['result']['addon']['path']
-            p1 = os.path.dirname(os.path.dirname(path))
-            p2 = os.path.basename(path)
-            #settings_xml = p1 + '/userdata/addon_data/' + p2 + '/settings.xml'
-            settings_xml = os.path.join(p1, 'userdata', 'addon_data', p2, 'settings.xml')
+        pvr_minsecs = int(float(__setting__('pvrwaketime')) * 60)
+    except ValueError:
+        pvr_minsecs = 300 # 5 mins.
 
-            settings = parse_settings(settings_xml)
-            if settings:
-                log('Reading values from file {}.'.format(settings_xml))
-                for set in settings:
-                    if set['id'] == 'pvrlocal':
-                        if set['value'] == 'false':
-                            pvr_local = False
-                        else:
-                            pvr_local = True
-                    elif set['id'] == 'pvrport':
-                        pvr_port = int(set['value'])
-                    elif set['id'] == 'pvrwaketime':
-                        pvr_minsecs = int(set['value']) * 60
-                    elif set['id'] == 'localports':
-                        watched_local = read_set(set['value'])
-                    elif set['id'] == 'remoteports':
-                        watched_remote = read_set(set['value'])
-                    elif set['id'] == 'procs':
-                        watched_procs = read_set(set['value'])
-            else:
-                log('Could not read from file {}.'.format(settings_xml))
-                log('Using default values.')
+    try:
+        pvr_port = int(__setting__('pvrport'))
+    except ValueErrror:
+        pvr_port = 34890  # VDR-VNSI
 
-        GET_LOCALE = {
-            'jsonrpc': '2.0',
-            'method': 'Settings.GetSettingValue',
-            'params': {
-                'setting': 'locale.language'
-            },
-            'id': 1
-        }
-        data = json_request(GET_LOCALE, 'localhost')
-        if data['result']:
-            lang = data['result']['value'].split('.')[-1]
-            if 'de' in lang:
-                busy_notification = 'Notification(Aktion abgebrochen, Hintergrundaktivitäten festgestellt)'
+    try:
+        pvr_local = True if __setting__('pvrlocal').lower() == 'true' else False
     except:
-        log('Could not query \'localhost\'. Check if kodi is running.')
-        log('Using default values.')
-        pass
+        pvr_local = True  # PVR backend on local system
+
+    try:
+        watched_local = read_set(__setting__('localports'))
+    except:
+        watched_local = {445, 2049}      #smb, nfs, or 'set()' for empty set
+
+    try:
+        watched_remote = read_set(__setting__('remoteports'))
+    except:
+        watched_remote = {22, 445}       #ssh, smb
+
+    try:
+        watched_procs = read_set(__setting__('procs'))
+    except:
+        watched_procs = {'HandBrakeCLI', 'ffmpeg', 'makemkv' , 'makemkvcon'}
 
     watched_local = port_trans(watched_local)
     watched_remote = port_trans(watched_remote)
 
-    log('Watching for remote connections on port(s) {},\n\t\t\t\tlocal connections on port(s) {}, and\n\t\t\t\tactive process(es) of {}.'.format(
-        ', '.join(str(x) for x in watched_remote),
-        ', '.join(str(x) for x in watched_local),
-        ', '.join(str(x) for x in watched_procs)))
+    if __name__ != '__main__':
+        xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+
+    return
+
+
+def get_sleep_time():
+    return sleep_time
+
+
+def json_request(kodi_request, host):
+    # http://host:8080/jsonrpc?request=kodi_request
+
+    PORT   =    8080
+    URL    =    'http://' + host + ':' + str(PORT) + '/jsonrpc'
+    HEADER =    {'Content-Type': 'application/json'}
+
+    if host == 'localhost':
+        response = xbmc.executeJSONRPC(json.dumps(kodi_request))
+        if response:
+            return json.loads(response.decode('utf8','mixed'))
+
+    request = urllib2.Request(URL, json.dumps(kodi_request), HEADER)
+    with closing(urllib2.urlopen(request)) as response:
+        return json.loads(response.read().decode('utf8', 'mixed'))
 
 
 def find_clients(port, include_localhost):
     #clients = set()
     clients = []
 
-    netstat = subprocess.check_output(['/bin/netstat', '-t', '-n'], universal_newlines=True)
+    my_env = os.environ.copy()
+    my_env['LC_ALL'] = 'en_EN'
+    netstat = subprocess.check_output(['/bin/netstat', '-t', '-n'], universal_newlines=True, env=my_env)
 
     for line in netstat.split('\n')[2:]:
         items = line.split()
-        if len(items) < 6 or (items[5] != 'VERBUNDEN' and items[5] != 'ESTABLISHED'):
+        if len(items) < 6 or (items[5] != 'ESTABLISHED'):
             continue
 
         local_addr, local_port = items[3].rsplit(':', 1)
@@ -327,7 +237,7 @@ def find_clients(port, include_localhost):
 
 
 def check_pvrclients():
-    if not pvr_local or not get_pid('kodi.bin'):
+    if not pvr_local or not kodi_is_running():
         return False
 
     GET_PLAYER = {
@@ -353,28 +263,25 @@ def check_pvrclients():
                 data = json_request(GET_ITEM, client)
 
                 if  data['result']['item']['type'] == 'channel':
-                    log('Live TV is being watched from IP address {}.'.format(client))
                     return True # a client is watching live-tv
                 elif 'pvr://' == urllib2.unquote(data['result']['item']['file'].encode('utf-8'))[:6]:
-                    log('A recording is being watched from IP address {}.'.format(client))
                     return True # a client is watching a recording
 
         except:
             continue
 
-    # log('No PVR clients connected.')
     return False
 
 
 def check_timers():
-    if not pvr_local or not get_pid('kodi.bin'):
+    if not pvr_local or not kodi_is_running():
         return False
 
     localhost = '127.0.0.1'
 
     if localhost not in find_clients(pvr_port, True):
-        log('Check timers: localhost not connected to pvr backend.')
         return False
+
     #if int(subprocess.check_output(['/bin/pidof', '-s', 'vdr'])) > 0:
     #   return False
 
@@ -402,11 +309,9 @@ def check_timers():
                     secs_before_recording = starttime - now
 
                 if secs_before_recording > 0 and secs_before_recording < pvr_minsecs:
-                    log('Recording scheduled in less than {} min.'.format(pvr_minsecs/60))
                     return True
 
                 if secs_before_recording < 0:
-                    log('Found active recording.')
                     return True
 
     # Sometimes we get a key error, maybe beacause pvr backend 
@@ -414,14 +319,15 @@ def check_timers():
     except KeyError:
         pass
 
-    # log('No upcoming or ongoing recording found.')
     return False
 
 
 def check_procs():
     procs = subprocess.check_output(['/bin/ps', 'cax'], universal_newlines=True)
 
-    for line in procs.split('\n')[1:]:
+    lines = procs.split('\n')[1:]
+
+    for line in lines:
         items = line.split()
         if len(items) < 5:
             continue
@@ -429,19 +335,21 @@ def check_procs():
         proc = items[4];
         #if proc in watched_procs:
         if proc.lower() in [element.lower() for element in watched_procs]:
-            log('Found active process of {}.'.format(proc))
             return True
 
-    # log('No active processes found.')
     return False
 
 
 def check_services():
-    netstat = subprocess.check_output(['/bin/netstat', '-t', '-n'], universal_newlines=True)
+    my_env = os.environ.copy()
+    my_env['LC_ALL'] = 'en_EN'
+    netstat = subprocess.check_output(['/bin/netstat', '-t', '-n'], universal_newlines=True, env=my_env)
 
-    for line in netstat.split('\n')[2:]:
+    lines = netstat.split('\n')[2:]
+
+    for line in lines:
         items = line.split()
-        if len(items) < 6 or (items[5] != 'VERBUNDEN' and items[5] != 'ESTABLISHED'):
+        if len(items) < 6 or (items[5] != 'ESTABLISHED'):
             continue
 
         local_addr, local_port = items[3].rsplit(':', 1)
@@ -457,38 +365,27 @@ def check_services():
 
         if ((local_addr != remote_addr) and (local_port in watched_remote)) or \
             ((local_addr == remote_addr) and (local_port in watched_local)):
-            log('Found connection from {} to {}:{}.'.format(remote_addr, local_addr, local_port))
             return True
 
-    # log('No active connections found.')
     return False
 
 
-def check_idle(arg_busy_action, arg_idle_action):
+def check_idle(arg_idle_action, arg_busy_action):
     if check_pvrclients() or check_timers() or check_services() or check_procs():
-        log('Background activities detected.')
-
         if arg_busy_action:
-            log('Sending action \'{}\' ...'.format(arg_busy_action))
-            xbmc_send(arg_busy_action)
-
+            xbmc.executebuiltin(arg_busy_action)
         elif arg_idle_action:
-            log('Action \'{}\' cancelled.'.format(arg_idle_action))
-            xbmc_send(busy_notification)
-
-        return 1
-
+            xbmc.executebuiltin(busy_notification)
+            xbmc.log(msg='[{}] Action \'{}\' cancelled. Background activities detected.'.format(__addon_id__, arg_idle_action), level=xbmc.LOGNOTICE)
     else:
-        log('No background activities detected.')
-
         if arg_idle_action:
-            log('Sending action \'{}\' ...'.format(arg_idle_action))
-            xbmc_send(arg_idle_action)
-
-        return 0
+            xbmc.executebuiltin(arg_idle_action)
+    return
 
 
 if __name__ == '__main__':
-    get_opts()
-    load_settings()
-    sys.exit(check_idle(busy_action, idle_action))
+    load_addon_settings()
+    check_idle(*get_opts())
+else:
+    xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+    load_addon_settings()
