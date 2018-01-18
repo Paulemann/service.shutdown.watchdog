@@ -67,12 +67,12 @@ def get_opts():
     if busy_action and ((busy_action[0] == '\'' and busy_action[-1] == '\'') or (busy_action[0] == '\"' and busy_action[-1] == '\"')):
         busy_action = busy_action[1:-1]
 
-    return idle_action, busy_action 
+    return idle_action, busy_action
 
 
 def get_pid(name):
     try:
-        pid = subprocess.check_output(['pidof', name])
+        pid = subprocess.check_output(['pidof', '-s', name])
     except subprocess.CalledProcessError:
         pid = []
 
@@ -80,10 +80,10 @@ def get_pid(name):
 
 
 def kodi_is_running():
-    #procs = subprocess.check_output(['/usr/bin/pgrep', 'kodi'], universal_newlines=True)
+    #procs = subprocess.check_output(['pgrep', 'kodi'], universal_newlines=True)
     # return procs != ''
 
-    procs = subprocess.check_output(['/bin/ps', 'cax'], universal_newlines=True)
+    procs = subprocess.check_output(['ps', 'cax'], universal_newlines=True)
 
     lines = procs.split('\n')[1:]
 
@@ -209,7 +209,7 @@ def find_clients(port, include_localhost):
 
     my_env = os.environ.copy()
     my_env['LC_ALL'] = 'en_EN'
-    netstat = subprocess.check_output(['/bin/netstat', '-t', '-n'], universal_newlines=True, env=my_env)
+    netstat = subprocess.check_output(['netstat', '-t', '-n'], universal_newlines=True, env=my_env)
 
     for line in netstat.split('\n')[2:]:
         items = line.split()
@@ -237,7 +237,7 @@ def find_clients(port, include_localhost):
 
 
 def check_pvrclients():
-    if not pvr_local or not kodi_is_running():
+    if not pvr_local:
         return False
 
     GET_PLAYER = {
@@ -263,8 +263,12 @@ def check_pvrclients():
                 data = json_request(GET_ITEM, client)
 
                 if  data['result']['item']['type'] == 'channel':
+                    if __name__ == '__main__':
+                        xbmc_log('Found client {} watching live tv.'.format(client))
                     return True # a client is watching live-tv
                 elif 'pvr://' == urllib2.unquote(data['result']['item']['file'].encode('utf-8'))[:6]:
+                    if __name__ == '__main__':
+                        xbmc_log('Found client {} watching a recording.'.format(client))
                     return True # a client is watching a recording
 
         except:
@@ -274,16 +278,13 @@ def check_pvrclients():
 
 
 def check_timers():
-    if not pvr_local or not kodi_is_running():
+    if not pvr_local:
         return False
 
     localhost = '127.0.0.1'
 
     if localhost not in find_clients(pvr_port, True):
         return False
-
-    #if int(subprocess.check_output(['/bin/pidof', '-s', 'vdr'])) > 0:
-    #   return False
 
     GET_TIMERS = {
         'jsonrpc': '2.0',
@@ -309,12 +310,16 @@ def check_timers():
                     secs_before_recording = starttime - now
 
                 if secs_before_recording > 0 and secs_before_recording < pvr_minsecs:
+                    if __name__ == '__main__':
+                        xbmc_log('Recording about to start in less than {} seconds.'.format(pvr_minsecs))
                     return True
 
                 if secs_before_recording < 0:
+                    if __name__ == '__main__':
+                        xbmc_log('Found active recording.')
                     return True
 
-    # Sometimes we get a key error, maybe beacause pvr backend 
+    # Sometimes we get a key error, maybe beacause pvr backend
     # is not responding or busy.
     except KeyError:
         pass
@@ -323,7 +328,7 @@ def check_timers():
 
 
 def check_procs():
-    procs = subprocess.check_output(['/bin/ps', 'cax'], universal_newlines=True)
+    procs = subprocess.check_output(['ps', 'cax'], universal_newlines=True)
 
     lines = procs.split('\n')[1:]
 
@@ -335,6 +340,8 @@ def check_procs():
         proc = items[4];
         #if proc in watched_procs:
         if proc.lower() in [element.lower() for element in watched_procs]:
+            if __name__ == '__main__':
+                xbmc_log('Found active process of {}.'.format(proc))
             return True
 
     return False
@@ -343,7 +350,7 @@ def check_procs():
 def check_services():
     my_env = os.environ.copy()
     my_env['LC_ALL'] = 'en_EN'
-    netstat = subprocess.check_output(['/bin/netstat', '-t', '-n'], universal_newlines=True, env=my_env)
+    netstat = subprocess.check_output(['netstat', '-t', '-n'], universal_newlines=True, env=my_env)
 
     lines = netstat.split('\n')[2:]
 
@@ -365,6 +372,8 @@ def check_services():
 
         if ((local_addr != remote_addr) and (local_port in watched_remote)) or \
             ((local_addr == remote_addr) and (local_port in watched_local)):
+            if __name__ == '__main__':
+                xbmc_log('Found active connection on port {}.'.format(local_port))
             return True
 
     return False
@@ -376,16 +385,24 @@ def check_idle(arg_idle_action, arg_busy_action):
             xbmc.executebuiltin(arg_busy_action)
         elif arg_idle_action:
             xbmc.executebuiltin(busy_notification)
-            xbmc.log(msg='[{}] Action \'{}\' cancelled. Background activities detected.'.format(__addon_id__, arg_idle_action), level=xbmc.LOGNOTICE)
+            if __name__ == '__main__':
+                xbmc_log('Action \'{}\' cancelled. Background activities detected.'.format(arg_idle_action))
     else:
         if arg_idle_action:
             xbmc.executebuiltin(arg_idle_action)
     return
 
 
+def xbmc_log(text):
+    xbmc.log(msg='[{}] {}'.format(__addon_id__, text), level=xbmc.LOGNOTICE)
+
+
 if __name__ == '__main__':
+    if not kodi_is_running():
+        sys.exit()
+    xbmc_log('RunScript action started.')
     load_addon_settings()
     check_idle(*get_opts())
 else:
-    xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+    xbmc_log('Addon started.')
     load_addon_settings()
