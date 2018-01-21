@@ -25,8 +25,6 @@ __setting__ = __addon__.getSetting
 __addon_id__ = __addon__.getAddonInfo('id')
 __localize__ = __addon__.getLocalizedString
 
-#kodi = 'kodi'
-kodi = 'kodi-standalone'
 
 #
 # Source: http://stackoverflow.com/questions/10009753/python-dealing-with-mixed-encoding-files
@@ -70,39 +68,21 @@ def get_opts():
     return idle_action, busy_action
 
 
-def get_pid(name):
-    try:
-        pid = subprocess.check_output(['pidof', '-s', name])
-    except subprocess.CalledProcessError:
-        pid = []
-
-    return pid
-
-
 def kodi_is_running():
-    #procs = subprocess.check_output(['pgrep', 'kodi'], universal_newlines=True)
-    # return procs != ''
+    try:
+        pid = subprocess.check_output(['pgrep', 'kodi-standalone'])
 
-    procs = subprocess.check_output(['ps', 'cax'], universal_newlines=True)
+    except subprocess.CalledProcessError:
+        return False
 
-    lines = procs.split('\n')[1:]
-
-    for line in lines:
-        items = line.split()
-        if len(items) < 5:
-            continue
-
-        proc = items[4];
-        if proc == kodi:
-            return True
-
-    return False
+    return True
 
 
 def is_number(s):
     try:
         float(s)
         return True
+
     except ValueError:
         return False
 
@@ -186,21 +166,39 @@ def get_sleep_time():
     return sleep_time
 
 
-def json_request(kodi_request, host):
-    # http://host:8080/jsonrpc?request=kodi_request
+def jsonrpc_request(method, params=None, host='localhost', port=8080):
+    # e.g. KodiJRPC_Get("PVR.GetProperties", {"properties": ["recording"]})
 
-    PORT   =    8080
-    URL    =    'http://' + host + ':' + str(PORT) + '/jsonrpc'
-    HEADER =    {'Content-Type': 'application/json'}
+    url = 'http://{}:{}/jsonrpc'.format(host, port)
+    header = {'Content-Type': 'application/json'}
 
-    if host == 'localhost':
-        response = xbmc.executeJSONRPC(json.dumps(kodi_request))
-        if response:
-            return json.loads(response.decode('utf8','mixed'))
+    jsondata = {
+        'jsonrpc': '2.0',
+        'method': method,
+        'id': method}
 
-    request = urllib2.Request(URL, json.dumps(kodi_request), HEADER)
-    with closing(urllib2.urlopen(request)) as response:
-        return json.loads(response.read().decode('utf8', 'mixed'))
+    if params:
+        jsondata['params'] = params
+
+    try:
+        if host == 'localhost':
+            response = xbmc.executeJSONRPC(json.dumps(jsondata))
+            data = json.loads(response.decode('utf-8','mixed'))
+
+            if data['id'] == method and data.has_key('result'):
+                return data['result']
+        else:
+            request = urllib2.Request(url, json.dumps(jsondata), header)
+            with closing(urllib2.urlopen(request)) as response:
+                data = json.loads(response.read().decode('utf8', 'mixed'))
+
+                if data['id'] == method and data.has_key('result'):
+                    return data['result']
+
+    except:
+        pass
+
+    return False
 
 
 def find_clients(port, include_localhost):
@@ -240,39 +238,24 @@ def check_pvrclients():
     if not pvr_local:
         return False
 
-    GET_PLAYER = {
-        'jsonrpc': '2.0',
-        'method': 'Player.GetActivePlayers',
-        'id': 1
-    }
-
-    GET_ITEM = {
-        'jsonrpc': '2.0',
-        'method': 'Player.GetItem',
-        'params': {
-            'properties': ['title', 'file'],
-            'playerid': 1
-        },
-        'id': 'VideoGetItem'
-    }
-
     for client in find_clients(pvr_port, False): # enumerate PVR clients, exclude localhost
         try:
-            data = json_request(GET_PLAYER, client)
-            if data['result'] and data['result'][0]['type'] == 'video':
-                data = json_request(GET_ITEM, client)
+            player = jsonrpc_request('Player.GetActivePlayers', host=client)
 
-                if  data['result']['item']['type'] == 'channel':
+            if player and player[0]['type'] == 'video':
+                data = jsonrpc_request('Player.GetItem', params={'properties': ['title', 'file'],'playerid': 1}, host=client)
+
+                if data and data['item']['type'] == 'channel':
                     if __name__ == '__main__':
                         xbmc_log('Found client {} watching live tv.'.format(client))
                     return True # a client is watching live-tv
-                elif 'pvr://' == urllib2.unquote(data['result']['item']['file'].encode('utf-8'))[:6]:
+                elif data and 'pvr://' == urllib2.unquote(data['item']['file'].encode('utf-8'))[:6]:
                     if __name__ == '__main__':
                         xbmc_log('Found client {} watching a recording.'.format(client))
                     return True # a client is watching a recording
 
-        except:
-            continue
+        except KeyError:
+            pass
 
     return False
 
@@ -286,22 +269,14 @@ def check_timers():
     if localhost not in find_clients(pvr_port, True):
         return False
 
-    GET_TIMERS = {
-        'jsonrpc': '2.0',
-        'method': 'PVR.GetTimers',
-        'params': {
-            'properties': ['title', 'starttime', 'endtime']
-        },
-        'id': 1
-    }
-    data = json_request(GET_TIMERS, 'localhost')
+    data = jsonrpc_request('PVR.GetTimers', params={'properties': ['title', 'starttime', 'endtime']})
 
     try:
-        if data['result']:
-            list = data['result']['timers']
-            for i in range(0, len(list)-1):
-                starttime = int(time.mktime(time.strptime(list[i]['starttime'], '%Y-%m-%d %H:%M:%S')))
-                endtime = int(time.mktime(time.strptime(list[i]['endtime'], '%Y-%m-%d %H:%M:%S')))
+        if data:
+            timers = data['timers']
+            for i in range(0, len(timers)-1):
+                starttime = int(time.mktime(time.strptime(timers[i]['starttime'], '%Y-%m-%d %H:%M:%S')))
+                endtime = int(time.mktime(time.strptime(timers[i]['endtime'], '%Y-%m-%d %H:%M:%S')))
                 now = int(time.mktime(time.gmtime()))
 
                 if starttime <= 0 or endtime <= now:
