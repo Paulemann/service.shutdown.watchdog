@@ -10,6 +10,7 @@ import xbmcaddon
 import subprocess
 import os
 import time
+import _strptime
 import sys
 import getopt
 
@@ -364,6 +365,7 @@ def check_idle(arg_idle_action, arg_busy_action):
                 xbmc_log('Action \'{}\' cancelled. Background activities detected.'.format(arg_idle_action))
     else:
         if arg_idle_action:
+            xbmc_log('System is idle. Executing requested action: \'{}\'.'.format(arg_idle_action))
             xbmc.executebuiltin(arg_idle_action)
     return
 
