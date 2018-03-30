@@ -7,9 +7,10 @@
 import xbmc
 import xbmcaddon
 
-import subprocess
-import os
+import psutil
+
 import time
+import _strptime
 import sys
 import getopt
 
@@ -25,6 +26,8 @@ __setting__ = __addon__.getSetting
 __addon_id__ = __addon__.getAddonInfo('id')
 __localize__ = __addon__.getLocalizedString
 
+#kodi = 'kodi'
+kodi = 'kodi-standalone'
 
 #
 # Source: http://stackoverflow.com/questions/10009753/python-dealing-with-mixed-encoding-files
@@ -44,7 +47,7 @@ codecs.register_error('mixed', mixed_decoder)
 def get_opts():
     idle_action = ''
     busy_action = ''
-    
+
     try:
         opts, args = getopt.getopt(sys.argv[1:], "i:b:", ["idle-action=", "busy-action="])
     except getopt.GetoptError, err:
@@ -65,22 +68,29 @@ def get_opts():
     if busy_action and ((busy_action[0] == '\'' and busy_action[-1] == '\'') or (busy_action[0] == '\"' and busy_action[-1] == '\"')):
         busy_action = busy_action[1:-1]
 
-    return idle_action, busy_action 
+    return idle_action, busy_action
 
 
-def get_pid(name):
-    try:
-        pid = subprocess.check_output(['pidof', name])
-    except subprocess.CalledProcessError:
-        pid = []
+def kodi_is_running():
+    if active_proc(kodi):
+        return True
 
-    return pid
+    return False
+
+
+#def kodi_is_running():
+#    for proc in psutil.process_iter(attrs=['pid', 'name']):
+#        if proc.status() != psutil.STATUS_ZOMBIE and proc.info['name'].lower() == kodi:
+#           return True
+#
+#    return False
 
 
 def is_number(s):
     try:
         float(s)
         return True
+
     except ValueError:
         return False
 
@@ -153,7 +163,7 @@ def load_addon_settings():
 
     watched_local = port_trans(watched_local)
     watched_remote = port_trans(watched_remote)
-    
+
     if __name__ != '__main__':
         xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
@@ -164,93 +174,87 @@ def get_sleep_time():
     return sleep_time
 
 
-def json_request(kodi_request, host):
-    # http://host:8080/jsonrpc?request=kodi_request
+def jsonrpc_request(method, params=None, host='localhost', port=8080, username=None, password=None):
+    # e.g. KodiJRPC_Get("PVR.GetProperties", {"properties": ["recording"]})
 
-    PORT   =    8080
-    URL    =    'http://' + host + ':' + str(PORT) + '/jsonrpc'
-    HEADER =    {'Content-Type': 'application/json'}
+    url = 'http://{}:{}/jsonrpc'.format(host, port)
+    header = {'Content-Type': 'application/json'}
 
-    if host == 'localhost':
-        response = xbmc.executeJSONRPC(json.dumps(kodi_request))
-        if response:
-            return json.loads(response.decode('utf8','mixed'))
+    jsondata = {
+        'jsonrpc': '2.0',
+        'method': method,
+        'id': method}
 
-    request = urllib2.Request(URL, json.dumps(kodi_request), HEADER)
-    with closing(urllib2.urlopen(request)) as response:
-        return json.loads(response.read().decode('utf8', 'mixed'))
+    if params:
+        jsondata['params'] = params
+
+    if username and password:
+        base64str = base64.encodestring('{}:{}'.format(username, password))[:-1]
+        header['Authorization'] = 'Basic {}'.format(base64str)
+
+    try:
+        if host == 'localhost':
+            response = xbmc.executeJSONRPC(json.dumps(jsondata))
+            data = json.loads(response.decode('utf-8','mixed'))
+
+            if data['id'] == method and data.has_key('result'):
+                return data['result']
+        else:
+            request = urllib2.Request(url, json.dumps(jsondata), header)
+            with closing(urllib2.urlopen(request)) as response:
+                data = json.loads(response.read().decode('utf8', 'mixed'))
+
+                if data['id'] == method and data.has_key('result'):
+                    return data['result']
+
+    except:
+        pass
+
+    return False
 
 
 def find_clients(port, include_localhost):
-    #clients = set()
-    clients = []
+    clients = set()
 
-    netstat = subprocess.check_output(['/bin/netstat', '-t', '-n'], universal_newlines=True)
-
-    for line in netstat.split('\n')[2:]:
-        items = line.split()
-        if len(items) < 6 or (items[5] != 'VERBUNDEN' and items[5] != 'ESTABLISHED'):
+    for conn in psutil.net_connections(kind='tcp4'):
+        if conn.status != psutil.CONN_ESTABLISHED or not conn.raddr:
             continue
 
-        local_addr, local_port = items[3].rsplit(':', 1)
-        remote_addr, remote_port = items[4].rsplit(':', 1)
-
-        if local_addr[0] == '[' and local_addr[-1] == ']':
-            local_addr = local_addr[1:-1]
-
-        if remote_addr[0] == '[' and remote_addr[-1] == ']':
-            remote_addr = remote_addr[1:-1]
-
-        local_port = int(local_port)
-
-        if local_port == port:
-            if remote_addr not in clients:
-                if remote_addr != local_addr or include_localhost:
-                    #clients.add(remote_addr) # doesn't require "if remote_addr not in clients:"
-                    clients.append(remote_addr)
+        if int(conn.laddr[1]) == port:
+            if conn.raddr[0] != conn.laddr[0] or include_localhost:
+                clients.add(conn.raddr[0])
 
     return clients
 
 
 def check_pvrclients():
-    if not pvr_local or not get_pid('kodi.bin'):
+    if not pvr_local:
         return False
-
-    GET_PLAYER = {
-        'jsonrpc': '2.0',
-        'method': 'Player.GetActivePlayers',
-        'id': 1
-    }
-
-    GET_ITEM = {
-        'jsonrpc': '2.0',
-        'method': 'Player.GetItem',
-        'params': {
-            'properties': ['title', 'file'],
-            'playerid': 1
-        },
-        'id': 'VideoGetItem'
-    }
 
     for client in find_clients(pvr_port, False): # enumerate PVR clients, exclude localhost
         try:
-            data = json_request(GET_PLAYER, client)
-            if data['result'] and data['result'][0]['type'] == 'video':
-                data = json_request(GET_ITEM, client)
+            player = jsonrpc_request('Player.GetActivePlayers', host=client)
 
-                if  data['result']['item']['type'] == 'channel':
+            if player and player[0]['type'] == 'video':
+                data = jsonrpc_request('Player.GetItem', params={'properties': ['title', 'file'],'playerid': 1}, host=client)
+
+                if data and data['item']['type'] == 'channel':
+                    if __name__ == '__main__':
+                        xbmc_log('Found client {} watching live tv.'.format(client))
                     return True # a client is watching live-tv
-                elif 'pvr://' == urllib2.unquote(data['result']['item']['file'].encode('utf-8'))[:6]:
+                elif data and 'pvr://' == urllib2.unquote(data['item']['file'].encode('utf-8'))[:6]:
+                    if __name__ == '__main__':
+                        xbmc_log('Found client {} watching a recording.'.format(client))
                     return True # a client is watching a recording
 
-        except:
-            continue
+        except KeyError:
+            pass
 
     return False
 
 
 def check_timers():
-    if not pvr_local or not get_pid('kodi.bin'):
+    if not pvr_local:
         return False
 
     localhost = '127.0.0.1'
@@ -258,25 +262,14 @@ def check_timers():
     if localhost not in find_clients(pvr_port, True):
         return False
 
-    #if int(subprocess.check_output(['/bin/pidof', '-s', 'vdr'])) > 0:
-    #   return False
-
-    GET_TIMERS = {
-        'jsonrpc': '2.0',
-        'method': 'PVR.GetTimers',
-        'params': {
-            'properties': ['title', 'starttime', 'endtime']
-        },
-        'id': 1
-    }
-    data = json_request(GET_TIMERS, 'localhost')
+    data = jsonrpc_request('PVR.GetTimers', params={'properties': ['title', 'starttime', 'endtime']})
 
     try:
-        if data['result']:
-            list = data['result']['timers']
-            for i in range(0, len(list)-1):
-                starttime = int(time.mktime(time.strptime(list[i]['starttime'], '%Y-%m-%d %H:%M:%S')))
-                endtime = int(time.mktime(time.strptime(list[i]['endtime'], '%Y-%m-%d %H:%M:%S')))
+        if data:
+            timers = data['timers']
+            for i in range(0, len(timers)-1):
+                starttime = int(time.mktime(time.strptime(timers[i]['starttime'], '%Y-%m-%d %H:%M:%S')))
+                endtime = int(time.mktime(time.strptime(timers[i]['endtime'], '%Y-%m-%d %H:%M:%S')))
                 now = int(time.mktime(time.gmtime()))
 
                 if starttime <= 0 or endtime <= now:
@@ -285,12 +278,16 @@ def check_timers():
                     secs_before_recording = starttime - now
 
                 if secs_before_recording > 0 and secs_before_recording < pvr_minsecs:
+                    if __name__ == '__main__':
+                        xbmc_log('Recording about to start in less than {} seconds.'.format(pvr_minsecs))
                     return True
 
                 if secs_before_recording < 0:
+                    if __name__ == '__main__':
+                        xbmc_log('Found active recording.')
                     return True
 
-    # Sometimes we get a key error, maybe beacause pvr backend 
+    # Sometimes we get a key error, maybe beacause pvr backend
     # is not responding or busy.
     except KeyError:
         pass
@@ -298,43 +295,47 @@ def check_timers():
     return False
 
 
+def active_proc(list):
+    for proc in psutil.process_iter(attrs=['pid', 'name']):
+        if proc.status() != psutil.STATUS_ZOMBIE and proc.info['name'].lower() in list:
+            return proc.info['name']
+
+    return None
+
+
 def check_procs():
-    procs = subprocess.check_output(['/bin/ps', 'cax'], universal_newlines=True)
+    plist = [element.lower() for element in watched_procs]
 
-    for line in procs.split('\n')[1:]:
-        items = line.split()
-        if len(items) < 5:
-            continue
-
-        proc = items[4];
-        #if proc in watched_procs:
-        if proc.lower() in [element.lower() for element in watched_procs]:
-            return True
+    pname = active_proc(plist)
+    if pname:
+        if __name__ == '__main__':
+            xbmc_log('Found active process of {}.'.format(pname))
+        return True
 
     return False
 
 
-def check_services():
-    netstat = subprocess.check_output(['/bin/netstat', '-t', '-n'], universal_newlines=True)
+#def check_procs():
+#    plist = [element.lower() for element in watched_procs]
+#
+#    for proc in psutil.process_iter(attrs=['pid', 'name']):
+#        if proc.status() != psutil.STATUS_ZOMBIE and proc.info['name'].lower() in plist:
+#            if __name__ == '__main__':
+#                xbmc_log('Found active process of {}.'.format(proc.info['name']))
+#            return True
+#
+#    return False
 
-    for line in netstat.split('\n')[2:]:
-        items = line.split()
-        if len(items) < 6 or (items[5] != 'VERBUNDEN' and items[5] != 'ESTABLISHED'):
+
+def check_services():
+    for conn in psutil.net_connections(kind='tcp4'):
+        if conn.status != psutil.CONN_ESTABLISHED or not conn.raddr:
             continue
 
-        local_addr, local_port = items[3].rsplit(':', 1)
-        remote_addr, remote_port = items[4].rsplit(':', 1)
-
-        if local_addr[0] == '[' and local_addr[-1] == ']':
-            local_addr = local_addr[1:-1]
-
-        if remote_addr[0] == '[' and remote_addr[-1] == ']':
-            remote_addr = remote_addr[1:-1]
-
-        local_port = int(local_port)
-
-        if ((local_addr != remote_addr) and (local_port in watched_remote)) or \
-            ((local_addr == remote_addr) and (local_port in watched_local)):
+        if ((conn.laddr[0] != conn.raddr[0]) and (int(conn.laddr[1]) in watched_remote)) or \
+            ((conn.laddr[0] == conn.raddr[0]) and (int(conn.laddr[1]) in watched_local)):
+            if __name__ == '__main__':
+                xbmc_log('Found active connection on port {}.'.format(conn.laddr[1]))
             return True
 
     return False
@@ -346,17 +347,25 @@ def check_idle(arg_idle_action, arg_busy_action):
             xbmc.executebuiltin(arg_busy_action)
         elif arg_idle_action:
             xbmc.executebuiltin(busy_notification)
-            xbmc.log(msg='[{}] Action \'{}\' cancelled. Background activities detected.'.format(__addon_id__, arg_idle_action), level=xbmc.LOGNOTICE)
+            if __name__ == '__main__':
+                xbmc_log('Action \'{}\' cancelled. Background activities detected.'.format(arg_idle_action))
     else:
         if arg_idle_action:
+            xbmc_log('System is idle. Executing requested action: \'{}\'.'.format(arg_idle_action))
             xbmc.executebuiltin(arg_idle_action)
     return
 
 
+def xbmc_log(text):
+    xbmc.log(msg='[{}] {}'.format(__addon_id__, text), level=xbmc.LOGNOTICE)
+
+
 if __name__ == '__main__':
+    if not kodi_is_running():
+        sys.exit()
+    xbmc_log('RunScript action started.')
     load_addon_settings()
     check_idle(*get_opts())
 else:
-    xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+    xbmc_log('Addon started.')
     load_addon_settings()
-    

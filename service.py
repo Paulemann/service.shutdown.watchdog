@@ -18,10 +18,9 @@ class MyMonitor( xbmc.Monitor ):
     def onSettingsChanged( self ):
         load_addon_settings()
 
-        
+
 if __name__ == '__main__':
     monitor = MyMonitor()
-    xbmc.log(msg='[{}] Addon started.'.format(__addon_id__), level=xbmc.LOGNOTICE)
 
     while not monitor.abortRequested():
         check_idle('InhibitIdleShutdown(false)', 'InhibitIdleShutdown(true)')
