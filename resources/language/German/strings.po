@@ -62,5 +62,35 @@ msgid "Time between checks (seconds)"
 msgstr "Zeit zwischen Überprüfungen (in Sek.)"
 
 msgctxt "#30008"
+msgid "Action cancelled, {}"
+msgstr "Aktion abgebrochen, {}"
+
+msgctxt "#30009"
+msgid "Client watching live tv"
+msgstr "Verbundenes Gerät schaut Live-TV"
+
+msgctxt "#30010"
+msgid "Client watching a recording"
+msgstr "Verbundenes Gerät schaut Aufnahme"
+
+msgctxt "#30011"
+msgid "Recording about to start shortly"
+msgstr "Aufnahme beginnt in Kürze"
+
+msgctxt "#30012"
+msgid "Active recording"
+msgstr "Aufnahme läuft"
+
+msgctxt "#30013"
+msgid "Process {} running"
+msgstr "Prozess {} läuft"
+
+msgctxt "#30014"
+msgid "Connection on port {}"
+msgstr "Verbindung auf Port {}"
+
+msgctxt "#30018"
 msgid "Action cancelled, Background activities detected"
 msgstr "Aktion abgebrochen, Hintergrundaktivitäten festgestellt"
+
+

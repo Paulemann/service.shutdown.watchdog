@@ -32,6 +32,8 @@ __localize__ = __addon__.getLocalizedString
 kodi = 'kodi'
 #kodi = 'kodi-standalone'
 
+busy_notification = 'Notification({})'.format(__localize__(30008).encode('utf-8'))
+
 #
 # Source: http://stackoverflow.com/questions/10009753/python-dealing-with-mixed-encoding-files
 #
@@ -107,7 +109,7 @@ def port_trans(plist):
 
 def read_set(item, default):
     ret = set()
-    for element in read_val(item, default).split(','):
+    for element in str(read_val(item, default)).split(','):
         try:
             item = int(element)
         except ValueError:
@@ -132,9 +134,7 @@ def read_val(item, default):
 
 
 def load_addon_settings():
-    global sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, busy_notification
-
-    busy_notification = 'Notification({})'.format(__localize__(30008).encode('utf-8'))
+    global sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs
 
     sleep_time     = read_val('sleep', 60)                    # 60 secs.
     pvr_minsecs    = read_val('pvrwaketime', 5) * 60          # 5 mins.
@@ -213,6 +213,8 @@ def find_clients(port, include_localhost):
 
 
 def check_pvrclients():
+    global busy_notification
+
     if not pvr_local:
         return False
 
@@ -224,10 +226,12 @@ def check_pvrclients():
                 data = jsonrpc_request('Player.GetItem', params={'properties': ['title', 'file'],'playerid': 1}, host=client)
 
                 if data and data['item']['type'] == 'channel':
+                    busy_notification = busy_notification.format(__localize__(30009).encode('utf-8'))
                     if __name__ == '__main__':
                         xbmc_log('Found client {} watching live tv.'.format(client))
                     return True # a client is watching live-tv
                 elif data and 'pvr://' == urllib2.unquote(data['item']['file'].encode('utf-8'))[:6]:
+                    busy_notification = busy_notification.format(__localize__(30010).encode('utf-8'))
                     if __name__ == '__main__':
                         xbmc_log('Found client {} watching a recording.'.format(client))
                     return True # a client is watching a recording
@@ -239,6 +243,8 @@ def check_pvrclients():
 
 
 def check_timers():
+    global busy_notification
+
     if not pvr_local:
         return False
 
@@ -263,11 +269,13 @@ def check_timers():
                     secs_before_recording = starttime - now
 
                 if secs_before_recording > 0 and secs_before_recording < pvr_minsecs:
+                    busy_notification = busy_notification.format(__localize__(30011).encode('utf-8'))
                     if __name__ == '__main__':
                         xbmc_log('Recording about to start in less than {} seconds.'.format(pvr_minsecs))
                     return True
 
                 if secs_before_recording < 0:
+                    busy_notification = busy_notification.format(__localize__(30012).encode('utf-8'))
                     if __name__ == '__main__':
                         xbmc_log('Found active recording.')
                     return True
@@ -320,10 +328,14 @@ def active_proc(list):
 
 
 def check_procs():
+    global busy_notification
+
     plist = [element.lower() for element in watched_procs]
 
     pname = active_proc(plist)
     if pname:
+        busy_notification = busy_notification.format(__localize__(30013).encode('utf-8'))
+        busy_notification = busy_notification.format(pname)
         if __name__ == '__main__':
             xbmc_log('Found active process of {}.'.format(pname))
         return True
@@ -332,6 +344,8 @@ def check_procs():
 
 
 def check_services():
+    global busy_notification
+
     for conn in active_conns():
         #if conn.status != psutil.CONN_ESTABLISHED or not conn.raddr:
         if conn.status != 'ESTABLISHED' or not conn.raddr:
@@ -339,6 +353,8 @@ def check_services():
 
         if ((conn.laddr[0] != conn.raddr[0]) and (int(conn.laddr[1]) in watched_remote)) or \
            ((conn.laddr[0] == conn.raddr[0]) and (int(conn.laddr[1]) in watched_local)):
+            busy_notification = busy_notification.format(__localize__(30014).encode('utf-8'))
+            busy_notification = busy_notification.format(conn.laddr[1])
             if __name__ == '__main__':
                 xbmc_log('Found active connection on port {}.'.format(conn.laddr[1]))
             return True
