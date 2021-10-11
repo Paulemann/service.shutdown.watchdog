@@ -134,12 +134,14 @@ def read_val(item, default):
 
 
 def load_addon_settings():
-    global sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs
+    global do_cecstandby, sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs
+
+    do_cecstandby  = read_val('cecstandby', False)            # Always send conn. devices to standby: False
 
     sleep_time     = read_val('sleep', 60)                    # 60 secs.
     pvr_minsecs    = read_val('pvrwaketime', 5) * 60          # 5 mins.
     pvr_port       = read_val('pvrport', 34890)               # VDR-VNSI
-    pvr_local      = read_val('pvrlocal', True)               # PVR backend on local system
+    pvr_local      = read_val('pvrlocal', True)               # PVR backend on local system: True
 
     watched_local  = read_set('localports', '445, 2049')      # smb, nfs, or 'set()' for empty set
     watched_remote = read_set('remoteports', '22, 445')       # ssh, smb
@@ -363,11 +365,19 @@ def check_services():
 
 
 def check_idle(arg_idle_action, arg_busy_action):
+    standby_actions = ['suspend', 'shutdown', 'hibernate', 'powerdown']
+
     if check_pvrclients() or check_timers() or check_services() or check_procs():
         if arg_busy_action:
             xbmc.executebuiltin(arg_busy_action)
         elif arg_idle_action:
             xbmc.executebuiltin(busy_notification)
+            if (arg_idle_action.lower() in standby_actions) and do_cecstandby:
+                if xbmc.Player().isPlaying():
+                    xbmc.executebuiltin('PlayerControl(Stop)')
+                time.sleep(3)
+                #xbmc.executebuiltin('CECStandby')
+                xbmc.executebuiltin('CECToggleState')
             if __name__ == '__main__':
                 xbmc_log('Action \'{}\' cancelled. Background activities detected.'.format(arg_idle_action))
     else:
