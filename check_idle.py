@@ -18,14 +18,24 @@ import sys
 import getopt
 
 import json
-import urllib2
 from contextlib import closing
 
 import codecs
 
+try:
+    from urllib.request import Request, urlopen
+    from urllib.parse import unquote
+except ImportError:
+    from urllib2 import Request, urlopen, unquote
 
-__addon__ = xbmcaddon.Addon()
-__setting__ = __addon__.getSetting
+if sys.version_info.major < 3:
+    INFO = xbmc.LOGNOTICE
+else:
+    INFO = xbmc.LOGINFO
+
+
+__addon__    = xbmcaddon.Addon()
+__setting__  = __addon__.getSetting
 __addon_id__ = __addon__.getAddonInfo('id')
 __localize__ = __addon__.getLocalizedString
 
@@ -33,6 +43,7 @@ kodi = 'kodi'
 #kodi = 'kodi-standalone'
 
 busy_notification = 'Notification({})'.format(__localize__(30008).encode('utf-8'))
+
 
 #
 # Source: http://stackoverflow.com/questions/10009753/python-dealing-with-mixed-encoding-files
@@ -43,8 +54,10 @@ def mixed_decoder(unicode_error):
     next_position = unicode_error.start + err_len
     replacement = err_str[unicode_error.start:unicode_error.end].decode('cp1252')
 
-    return u'%s' % replacement, next_position
-
+    if sys.version_info.major < 3:
+        return u'%s' % replacement, next_position
+    else:
+        return '%s' % replacement, next_position
 
 codecs.register_error('mixed', mixed_decoder)
 
@@ -55,7 +68,7 @@ def get_opts():
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "i:b:", ["idle-action=", "busy-action="])
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         return
 
     for opt, arg in opts:
@@ -151,7 +164,7 @@ def load_addon_settings():
     watched_remote = port_trans(watched_remote)
 
     if __name__ != '__main__':
-        xbmc.log(msg='[{}] Settings loaded.'.format(__addon_id__), level=xbmc.LOGNOTICE)
+        xbmc_log('Settings loaded.')
 
     return
 
@@ -183,14 +196,14 @@ def jsonrpc_request(method, params=None, host='localhost', port=8080, username=N
             response = xbmc.executeJSONRPC(json.dumps(jsondata))
             data = json.loads(response.decode('utf-8','mixed'))
 
-            if data['id'] == method and data.has_key('result'):
+            if data['id'] == method and 'result' in data:
                 return data['result']
         else:
-            request = urllib2.Request(url, json.dumps(jsondata), header)
-            with closing(urllib2.urlopen(request)) as response:
+            request = Request(url, json.dumps(jsondata), header)
+            with closing(urlopen(request)) as response:
                 data = json.loads(response.read().decode('utf8', 'mixed'))
 
-                if data['id'] == method and data.has_key('result'):
+                if data['id'] == method and 'result' in data:
                     return data['result']
 
     except:
@@ -223,7 +236,11 @@ def check_pvrclients():
     for client in find_clients(pvr_port, False): # enumerate PVR clients, exclude localhost
         try:
             player = jsonrpc_request('Player.GetActivePlayers', host=client)
+        except:
+            xbmc_log('Unable to request player info. Check if rpc control is allowed on host {}.'.format(client))
+            continue
 
+        try:
             if player and player[0]['type'] == 'video':
                 data = jsonrpc_request('Player.GetItem', params={'properties': ['title', 'file'],'playerid': 1}, host=client)
 
@@ -232,7 +249,7 @@ def check_pvrclients():
                     if __name__ == '__main__':
                         xbmc_log('Found client {} watching live tv.'.format(client))
                     return True # a client is watching live-tv
-                elif data and 'pvr://' == urllib2.unquote(data['item']['file'].encode('utf-8'))[:6]:
+                elif data and 'pvr://' == unquote(data['item']['file'].encode('utf-8'))[:6]:
                     busy_notification = busy_notification.format(__localize__(30010).encode('utf-8'))
                     if __name__ == '__main__':
                         xbmc_log('Found client {} watching a recording.'.format(client))
@@ -388,7 +405,7 @@ def check_idle(arg_idle_action, arg_busy_action):
 
 
 def xbmc_log(text):
-    xbmc.log(msg='[{}] {}'.format(__addon_id__, text), level=xbmc.LOGNOTICE)
+    xbmc.log(msg='[{}] {}'.format(__addon_id__, text), level=INFO)
 
 
 if __name__ == '__main__':
