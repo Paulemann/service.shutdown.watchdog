@@ -47,11 +47,11 @@ msgstr "Überwachte Prozesse (lokal)"
 
 msgctxt "#30004"
 msgid "PVR backend on localhost"
-msgstr "Lokal installiertes PVR Backend"
+msgstr "Lokal installiertes PVR-Backend"
 
 msgctxt "#30005"
 msgid "PVR client port (see config of PVR backend)"
-msgstr "PVR Client Port (siehe Konf. PVR Backend)"
+msgstr "PVR Client Port (siehe Konf. PVR-Backend)"
 
 msgctxt "#30006"
 msgid "Wake time before recording (minutes)"
@@ -96,5 +96,37 @@ msgstr "An HDMI angeschl. Geräte beim Ausschalten immer in Standy versetzen"
 msgctxt "#30018"
 msgid "Action cancelled, Background activities detected"
 msgstr "Aktion abgebrochen, Hintergrundaktivitäten festgestellt"
+
+msgctxt "#30019"
+msgid "At least one client still connected"
+msgstr "Es ist noch mind. ein Gerät verbunden"
+
+msgctxt "#30020"
+msgid "Keep system awake even for idle PVR clients"
+msgstr "System auch für PVR-Clients im Leerlauf wach halten"
+
+msgctxt "#30021"
+msgid "Port for requests to remote PVR clients"
+msgstr "Port zur Abfrage von entfernten PVR-Clients"
+
+msgctxt "#30022"
+msgid "User name for requests to remote PVR clients"
+msgstr "Benutzername zur Abfrage von entfernten PVR-Clients"
+
+msgctxt "#30023"
+msgid "Password for requests to remote PVR clients"
+msgstr "Passwort zur Abfrage von entfernten PVR-Clients"
+
+msgctxt "#30030"
+msgid "PVR Backend"
+msgstr "PVR-Backend"
+
+msgctxt "#30040"
+msgid "Connected Devices"
+msgstr "Angeschlossene Geräte"
+
+msgctxt "#30050"
+msgid "RPC Settings"
+msgstr "RPC-Einstellungen"
 
 

@@ -97,3 +97,35 @@ msgctxt "#30018"
 msgid "Action cancelled, Background activities detected"
 msgstr ""
 
+msgctxt "#30019"
+msgid "At least one client still connected"
+msgstr ""
+
+msgctxt "#30020"
+msgid "Keep system awake even for idle PVR clients"
+msgstr ""
+
+msgctxt "#30021"
+msgid "Port for requests to remote PVR clients"
+msgstr ""
+
+msgctxt "#30022"
+msgid "User name for requests to remote PVR clients"
+msgstr ""
+
+msgctxt "#30023"
+msgid "Password for requests to remote PVR clients"
+msgstr ""
+
+msgctxt "#30030"
+msgid "PVR Backend"
+msgstr ""
+
+msgctxt "#30040"
+msgid "Connected Devices"
+msgstr ""
+
+msgctxt "#30050"
+msgid "RPC Settings"
+msgstr ""
+

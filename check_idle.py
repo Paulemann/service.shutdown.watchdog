@@ -1,37 +1,33 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-#
-# Source https://github.com/bluecube/service.inhibit_shutdown
-#
 import xbmc
 import xbmcaddon
 
 #import psutil
 import subprocess
 import os
+import base64
 
 import time
 import calendar
 import _strptime
 import sys
 import getopt
-
+import requests
 import json
-from contextlib import closing
-
 import codecs
 
 try:
-    from urllib.request import Request, urlopen
     from urllib.parse import unquote
 except ImportError:
-    from urllib2 import Request, urlopen, unquote
+    from urllib2 import unquote
 
 if sys.version_info.major < 3:
     INFO = xbmc.LOGNOTICE
 else:
     INFO = xbmc.LOGINFO
+DEBUG = xbmc.LOGDEBUG
 
 
 __addon__    = xbmcaddon.Addon()
@@ -42,24 +38,19 @@ __localize__ = __addon__.getLocalizedString
 kodi = 'kodi'
 #kodi = 'kodi-standalone'
 
-busy_notification = 'Notification({})'.format(__localize__(30008).encode('utf-8'))
-
 
 #
-# Source: http://stackoverflow.com/questions/10009753/python-dealing-with-mixed-encoding-files
+# Source https://github.com/bluecube/service.inhibit_shutdown
 #
-def mixed_decoder(unicode_error):
-    err_str = unicode_error[1]
-    err_len = unicode_error.end - unicode_error.start
-    next_position = unicode_error.start + err_len
-    replacement = err_str[unicode_error.start:unicode_error.end].decode('cp1252')
 
+def translate(id):
     if sys.version_info.major < 3:
-        return u'%s' % replacement, next_position
+        return __localize__(id).encode('utf-8')
     else:
-        return '%s' % replacement, next_position
+        return __localize__(id)
 
-codecs.register_error('mixed', mixed_decoder)
+
+busy_notification = 'Notification({})'.format(translate(30008))
 
 
 def get_opts():
@@ -147,18 +138,23 @@ def read_val(item, default):
 
 
 def load_addon_settings():
-    global do_cecstandby, sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs
+    global do_cecstandby, rpc_port, rpc_username, rpc_password, sleep_time, watched_local, watched_remote, watched_procs, pvr_local, pvr_port, pvr_minsecs, nostdby_on_idle_pvrclient
 
-    do_cecstandby  = read_val('cecstandby', False)            # Always send conn. devices to standby: False
+    do_cecstandby             = read_val('cecstandby', False)            # Always send conn. devices to standby: False
 
-    sleep_time     = read_val('sleep', 60)                    # 60 secs.
-    pvr_minsecs    = read_val('pvrwaketime', 5) * 60          # 5 mins.
-    pvr_port       = read_val('pvrport', 34890)               # VDR-VNSI
-    pvr_local      = read_val('pvrlocal', True)               # PVR backend on local system: True
+    rpc_port                  = read_val('rpcport', 8080)                # Port for RPC
+    rpc_username              = read_val('username', None)               # Username for RPC
+    rpc_password              = read_val ('password', None)              # Password for RPC
 
-    watched_local  = read_set('localports', '445, 2049')      # smb, nfs, or 'set()' for empty set
-    watched_remote = read_set('remoteports', '22, 445')       # ssh, smb
-    watched_procs  = read_set('procs', 'HandBrakeCLI, ffmpeg, makemkv, makemkvcon')
+    sleep_time                = read_val('sleep', 60)                    # 60 secs.
+    pvr_minsecs               = read_val('pvrwaketime', 5) * 60          # 5 mins.
+    pvr_port                  = read_val('pvrport', 34890)               # VDR-VNSI
+    pvr_local                 = read_val('pvrlocal', True)               # PVR backend on local system: True
+    nostdby_on_idle_pvrclient = read_val('pvridle', False)               # Keep system awake even for idle pvr clients: False
+
+    watched_local             = read_set('localports', '445, 2049')      # smb, nfs, or 'set()' for empty set
+    watched_remote            = read_set('remoteports', '22, 445')       # ssh, smb
+    watched_procs             = read_set('procs', 'HandBrakeCLI, ffmpeg, makemkv, makemkvcon')
 
     watched_local  = port_trans(watched_local)
     watched_remote = port_trans(watched_remote)
@@ -173,11 +169,48 @@ def get_sleep_time():
     return sleep_time
 
 
-def jsonrpc_request(method, params=None, host='localhost', port=8080, username=None, password=None):
-    # e.g. KodiJRPC_Get("PVR.GetProperties", {"properties": ["recording"]})
+def utfy_dict(dic):
+    if not sys.version_info.major < 3:
+       return dic
 
-    url = 'http://{}:{}/jsonrpc'.format(host, port)
-    header = {'Content-Type': 'application/json'}
+    if isinstance(dic,unicode):
+        return dic.encode("utf-8")
+    elif isinstance(dic,dict):
+        for key in dic:
+            dic[key] = utfy_dict(dic[key])
+        return dic
+    elif isinstance(dic,list):
+        new_l = []
+        for e in dic:
+            new_l.append(utfy_dict(e))
+        return new_l
+    else:
+        return dic
+
+
+#def mixed_decoder(error: UnicodeError) -> (str, int):
+#     bs: bytes = error.object[error.start: error.end]
+#     return bs.decode("cp1252"), error.start + 1
+
+def mixed_decoder(unicode_error):
+    err_str = unicode_error[1]
+    err_len = unicode_error.end - unicode_error.start
+    next_position = unicode_error.start + err_len
+    replacement = err_str[unicode_error.start:unicode_error.end].decode('cp1252')
+
+    if sys.version_info.major < 3:
+        return u'%s' % replacement, next_position
+    else:
+        return '%s' % replacement, next_position
+
+codecs.register_error('mixed', mixed_decoder)
+
+
+def jsonrpc_request(method, host='localhost', params=None, port=8080, username=None, password=None):
+    url     =    'http://{}:{}/jsonrpc'.format(host, port)
+    headers =    {'Content-Type': 'application/json'}
+
+    xbmc.log(msg='[{}] Initializing RPC request to host {} with method \'{}\'.'.format(__addon_id__, host, method), level=DEBUG)
 
     jsondata = {
         'jsonrpc': '2.0',
@@ -188,28 +221,40 @@ def jsonrpc_request(method, params=None, host='localhost', port=8080, username=N
         jsondata['params'] = params
 
     if username and password:
-        base64str = base64.encodestring('{}:{}'.format(username, password))[:-1]
-        header['Authorization'] = 'Basic {}'.format(base64str)
+        auth_str = '{}:{}'.format(username, password)
+        try:
+            base64str = base64.encodestring(auth_str)[:-1]
+        except:
+            base64str = base64.b64encode(auth_str.encode()).decode()
+        headers['Authorization'] = 'Basic {}'.format(base64str)
 
     try:
-        if host == 'localhost':
+        if host in ['localhost', '127.0.0.1']:
             response = xbmc.executeJSONRPC(json.dumps(jsondata))
-            data = json.loads(response.decode('utf-8','mixed'))
-
-            if data['id'] == method and 'result' in data:
-                return data['result']
+            if sys.version_info.major < 3:
+                data = json.loads(response.decode('utf-8', 'mixed'))
+            else:
+                data = json.loads(response)
         else:
-            request = Request(url, json.dumps(jsondata), header)
-            with closing(urlopen(request)) as response:
-                data = json.loads(response.read().decode('utf8', 'mixed'))
+            response = requests.post(url, data=json.dumps(jsondata), headers=headers)
+            if not response.ok:
+                xbmc.log(msg='[{}] RPC request to host {} failed with status \'{}\'.'.format(__addon_id__, host, response.status_code), level=INFO)
+                return None
 
-                if data['id'] == method and 'result' in data:
-                    return data['result']
+            if sys.version_info.major < 3:
+                data = json.loads(response.content.decode('utf-8', 'mixed'))
+            else:
+                data = json.loads(response.text)
 
-    except:
+        if data['id'] == method and 'result' in data:
+            xbmc.log(msg='[{}] RPC request to host {} returns data \'{}\'.'.format(__addon_id__, host, data['result']), level=DEBUG)
+            return utfy_dict(data['result'])
+
+    except Exception as e:
+        xbmc.log(msg='[{}] RPC request to host {} failed with error \'{}\'.'.format(__addon_id__, host, str(e)), level=INFO)
         pass
 
-    return False
+    return None
 
 
 def find_clients(port, include_localhost):
@@ -234,26 +279,32 @@ def check_pvrclients():
         return False
 
     for client in find_clients(pvr_port, False): # enumerate PVR clients, exclude localhost
-        try:
-            player = jsonrpc_request('Player.GetActivePlayers', host=client)
-        except:
+        player = jsonrpc_request('Player.GetActivePlayers', host=client, port=rpc_port, username=rpc_username, password=rpc_password)
+
+        if not player:
             xbmc_log('Unable to request player info. Check if rpc control is allowed on host {}.'.format(client))
             continue
 
         try:
             if player and player[0]['type'] == 'video':
-                data = jsonrpc_request('Player.GetItem', params={'properties': ['title', 'file'],'playerid': 1}, host=client)
+                data = jsonrpc_request('Player.GetItem', params={'properties': ['title', 'file'],'playerid': 1}, host=client, port = rpc_port, username=rpc_username, password=rpc_password)
 
                 if data and data['item']['type'] == 'channel':
-                    busy_notification = busy_notification.format(__localize__(30009).encode('utf-8'))
+                    busy_notification = busy_notification.format(translate(30009))
                     if __name__ == '__main__':
-                        xbmc_log('Found client {} watching live tv.'.format(client))
-                    return True # a client is watching live-tv
-                elif data and 'pvr://' == unquote(data['item']['file'].encode('utf-8'))[:6]:
-                    busy_notification = busy_notification.format(__localize__(30010).encode('utf-8'))
+                        xbmc_log('Found pvr client {} watching live tv.'.format(client))
+                    return True # a pvr client is watching live-tv
+                elif data and 'pvr://' == unquote(data['item']['file'])[:6]:
+                    busy_notification = busy_notification.format(translate(30010))
                     if __name__ == '__main__':
-                        xbmc_log('Found client {} watching a recording.'.format(client))
-                    return True # a client is watching a recording
+                        xbmc_log('Found pvr client {} watching a recording.'.format(client))
+                    return True # a pvr client is watching a recording
+            else: #NEW
+                if nostdby_on_idle_pvrclient:
+                    busy_notification = busy_notification.format(translate(30019))
+                    if __name__ == '__main__':
+                        xbmc_log('Found pvr client {} in idle state.'.format(client))
+                    return True # keep system awake even as long as any pvr client is connected
 
         except KeyError:
             pass
@@ -288,13 +339,13 @@ def check_timers():
                     secs_before_recording = starttime - now
 
                 if secs_before_recording > 0 and secs_before_recording < pvr_minsecs:
-                    busy_notification = busy_notification.format(__localize__(30011).encode('utf-8'))
+                    busy_notification = busy_notification.format(translate(30011))
                     if __name__ == '__main__':
                         xbmc_log('Recording about to start in less than {} seconds.'.format(pvr_minsecs))
                     return True
 
                 if secs_before_recording < 0:
-                    busy_notification = busy_notification.format(__localize__(30012).encode('utf-8'))
+                    busy_notification = busy_notification.format(translate(30012))
                     if __name__ == '__main__':
                         xbmc_log('Found active recording.')
                     return True
@@ -353,7 +404,7 @@ def check_procs():
 
     pname = active_proc(plist)
     if pname:
-        busy_notification = busy_notification.format(__localize__(30013).encode('utf-8'))
+        busy_notification = busy_notification.format(translate(30013))
         busy_notification = busy_notification.format(pname)
         if __name__ == '__main__':
             xbmc_log('Found active process of {}.'.format(pname))
@@ -372,7 +423,7 @@ def check_services():
 
         if ((conn.laddr[0] != conn.raddr[0]) and (int(conn.laddr[1]) in watched_remote)) or \
            ((conn.laddr[0] == conn.raddr[0]) and (int(conn.laddr[1]) in watched_local)):
-            busy_notification = busy_notification.format(__localize__(30014).encode('utf-8'))
+            busy_notification = busy_notification.format(translate(30014))
             busy_notification = busy_notification.format(conn.laddr[1])
             if __name__ == '__main__':
                 xbmc_log('Found active connection on port {}.'.format(conn.laddr[1]))
@@ -393,8 +444,7 @@ def check_idle(arg_idle_action, arg_busy_action):
                 if xbmc.Player().isPlaying():
                     xbmc.executebuiltin('PlayerControl(Stop)')
                 time.sleep(3)
-                #xbmc.executebuiltin('CECStandby')
-                xbmc.executebuiltin('CECToggleState')
+                xbmc.executebuiltin('CECStandby')
             if __name__ == '__main__':
                 xbmc_log('Action \'{}\' cancelled. Background activities detected.'.format(arg_idle_action))
     else:
